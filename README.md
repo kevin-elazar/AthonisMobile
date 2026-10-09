@@ -60,28 +60,29 @@ Mais de 15 anos de mercado, operando diariamente um volume expressivo de pedidos
              │  REST API (JWT)
              ▼
 ┌──────────────────────────┐
-│     Athonis Backend      │  ← Node.js + Express
+│     Athonis Backend      │  ← NestJS + TypeORM
 │   (novos endpoints)      │
 └──────┬───────────────────┘
        │
   ┌────┴─────┐   ┌──────────────────────┐
-  │PostgreSQL│   │     Athonis Web      │  ← React
+  │  SQLite  │   │     Athonis Web      │  ← Next.js
   │   (BD)   │   │  (painel analítico)  │
   └──────────┘   └──────────────────────┘
 ```
 
-**Padrão arquitetural:** MVC aplicado no mobile e no backend.  
-**Decisão de design:** o backend Athonis é *extendido* com novos endpoints — sem criação de nova infraestrutura.
+**Padrão arquitetural:** MVC no mobile (models, hooks como controllers, telas como views); módulos NestJS no backend.  
+**Decisão de design:** o backend Athonis é *extendido* com novos endpoints — sem criação de nova infraestrutura.  
+**Banco de dados:** SQLite durante o desenvolvimento e os testes; migração para PostgreSQL planejada.
 
 ### Stack tecnológico
 
 | Camada | Tecnologia |
 |--------|------------|
 | Aplicativo mobile | React Native + Expo |
-| Backend (API) | Node.js + Express |
-| Frontend web | React |
-| Banco de dados | PostgreSQL |
-| Mapas / Rotas | Google Maps API |
+| Backend (API) | Node.js + NestJS + TypeORM |
+| Frontend web | Next.js (React) |
+| Banco de dados | SQLite (PostgreSQL planejado) |
+| Mapas / Rotas | Google Maps Platform (Route Optimization, Geocoding, Street View) |
 | Autenticação | JWT |
 
 ---
@@ -106,45 +107,27 @@ O Athonis Mobile resolve ambos: análise comparativa como funcionalidade de prim
 
 ---
 
-## 📅 Cronograma de desenvolvimento
+## 📅 Plano de desenvolvimento
 
-| Sprint | Período | Entrega |
-|--------|---------|---------|
-| S1 | Jul S1–S2 | Setup Expo, estrutura MVC, autenticação JWT |
-| S2 | Jul S3–S4 | Modelagem BD: tabelas de entrega, ocorrência e métrica |
-| S3 | Ago S1–S2 | Endpoints Node.js para listagem de entregas por motorista |
-| S4 | Ago S3–S4 | Tela de sequência de entregas + Google Maps (deep link) |
-| S5 | Set S1–S2 | Marcação de entrega concluída/ocorrência + timestamp |
-| S6 | Set S3–S4 | Coleta de métricas em tempo real (geolocalização + cronômetro) |
-| S7 | Out S1–S2 | Análise comparativa: rota planejada vs. executada |
-| S8 | Out S3–S4 | Painel analítico integrado ao frontend React |
-| S9 | Nov S1–S2 | Testes integrados, ajustes de UX e performance |
-| S10 | Nov S3–S4 | Documentação técnica, TCC final e defesa |
+O plano por fases, com tarefas e critérios de aceite, está em [`SPEC.md`](SPEC.md).
+O desenvolvimento acontece na branch `desenvMobile`, que existe nos três repositórios (mobile, backend e front-end).
 
 ---
 
 ## 🚀 Como executar
 
-> 🚧 Em desenvolvimento — instruções completas serão adicionadas durante os sprints.
+> 🚧 Em desenvolvimento — as instruções do app entram quando o projeto Expo for criado (Fase 2 do `SPEC.md`).
 
 ### Pré-requisitos
-- Node.js 20+
-- Expo CLI (`npm install -g expo-cli`)
-- Dispositivo físico ou emulador Android/iOS
-
-### Mobile (Expo)
-```bash
-cd athonis-mobile
-npm install
-npx expo start
-```
+- Node.js 22+
+- Android Studio (SDK + emulador) ou aparelho físico com Expo Go
 
 ### Backend (Athonis)
 ```bash
-cd athonis-backend
+cd AthonisBackend
 npm install
-cp .env.example .env   # configure as variáveis (DB, JWT_SECRET, GOOGLE_MAPS_KEY)
-npm run dev
+cp .env.example .env   # configure JWT_SECRET e as variáveis do Google
+npm run start:dev
 ```
 
 ---
