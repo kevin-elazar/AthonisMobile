@@ -7,18 +7,18 @@
 
 ---
 
-## Estado atual (08/10/2026)
+## Estado atual (12/10/2026)
 
 | Parte | Situação |
 |---|---|
-| Backend — Fases 1, 3, 4 e 5 | Feito e no GitHub. 148 testes unitários e 42 e2e passando |
-| Mobile — código das Fases 2, 3 e 4 | Escrito. Tipos, lint e 23 testes da fila offline passando |
-| Mobile — conferência no navegador | **Interrompida**: a tela de login abriu, mas na única tentativa de entrar o app continuou na tela de login, sem mensagem de erro — causa não investigada. Rotas, baixa de parada e sincronização ainda não foram conferidos rodando |
-| Mobile — aparelho real / GPS em segundo plano | Não testado (exige development build) |
-| Web — acesso do motorista, ocorrências na tela de rotas, painel analítico | Não iniciado |
+| Backend — Fases 1, 3, 4 e 5 | Feito. 148 testes unitários e 42 e2e passando |
+| Mobile — Fases 2 e 3 | Feito e conferido rodando no navegador: login, rotas do dia, saída, chegada, entrega, ocorrência, encerramento, sincronização e logout |
+| Mobile — fila offline | Conferida com o backend desligado: três ações ficaram pendentes e subiram sozinhas quando ele voltou, em ordem e com a hora original |
+| Mobile — Fase 4 (GPS) | Código escrito e coberto pelos testes da fila, mas **não testado em aparelho**: o navegador não tem rastreamento. Exige o APK de desenvolvimento |
+| Web — acesso do motorista, situação "não entregue", painel de execução em campo | Feito e conferido no navegador com os dados da rota executada pelo app |
 | Fases 6 a 9 | Não iniciadas |
 
-Para retomar a conferência: subir o backend (`npm run start:dev`), rodar `node scripts/seed-driver-demo.js` no backend (a rota é criada para o dia de hoje, então precisa ser rodado de novo a cada dia) e `npm run web` no mobile.
+Para rodar tudo localmente: `npm run start:dev` no backend, `node scripts/seed-driver-demo.js` no backend (a rota é criada para o dia de hoje; rode de novo a cada dia), `npm run web` no mobile e `npm run dev` no front-end.
 
 Diferenças em relação ao plano abaixo, decididas durante a implementação:
 
