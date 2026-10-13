@@ -109,6 +109,27 @@ export class SqliteStore implements LocalStore {
     return this.opening;
   }
 
+  private queue: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Uma transação por vez.
+   *
+   * A conexão é uma só, e o SQLite não aceita uma transação dentro de outra.
+   * A tarefa de GPS grava pontos a cada leitura, no mesmo instante em que a
+   * tela pode estar gravando uma baixa: sem fila, o segundo BEGIN falhava e o
+   * ROLLBACK seguinte estourava com "no transaction is active", perdendo o
+   * lote de pontos. Aqui cada transação espera a anterior terminar.
+   */
+  private transaction(task: (db: SQLite.SQLiteDatabase) => Promise<void>): Promise<void> {
+    const next = this.queue.then(async () => {
+      const db = await this.db();
+      await db.withTransactionAsync(() => task(db));
+    });
+    // A fila segue mesmo que esta transação falhe; o erro vai para quem a pediu.
+    this.queue = next.catch(() => undefined);
+    return next;
+  }
+
   async getRoutes(): Promise<CachedRoutes> {
     const db = await this.db();
     const rows = await db.getAllAsync<{ payload: string }>(
@@ -122,8 +143,7 @@ export class SqliteStore implements LocalStore {
   }
 
   async replaceRoutes(day: string, routes: DriverRoute[], fetchedAt: string): Promise<void> {
-    const db = await this.db();
-    await db.withTransactionAsync(async () => {
+    await this.transaction(async (db) => {
       await db.runAsync('DELETE FROM route');
       for (const route of routes) {
         await db.runAsync(
@@ -166,8 +186,7 @@ export class SqliteStore implements LocalStore {
   }
 
   async enqueue(item: NewOutboxItem, updatedRoute: DriverRoute): Promise<OutboxItem> {
-    const db = await this.db();
-    await db.withTransactionAsync(async () => {
+    await this.transaction(async (db) => {
       await db.runAsync(
         `INSERT INTO outbox (id, route_id, order_id, kind, payload, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -185,6 +204,7 @@ export class SqliteStore implements LocalStore {
       );
     });
 
+    const db = await this.db();
     const row = await db.getFirstAsync<OutboxRecord>('SELECT * FROM outbox WHERE id = ?', item.id);
     if (!row) throw new Error('A ação não foi gravada na fila');
     return toOutboxItem(row);
@@ -219,8 +239,7 @@ export class SqliteStore implements LocalStore {
 
   async addPings(pings: PingRow[]): Promise<void> {
     if (pings.length === 0) return;
-    const db = await this.db();
-    await db.withTransactionAsync(async () => {
+    await this.transaction(async (db) => {
       for (const ping of pings) {
         await db.runAsync(
           `INSERT OR IGNORE INTO ping (id, route_id, latitude, longitude, accuracy_m, speed_mps, recorded_at)
