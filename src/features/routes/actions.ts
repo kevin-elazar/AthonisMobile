@@ -12,6 +12,8 @@ export interface RouteActionInput {
   orderId?: number;
   notes?: string;
   occurrenceType?: OccurrenceType;
+  /** Obrigatório no cancelamento da rota. */
+  reason?: string;
 }
 
 /**
@@ -28,6 +30,13 @@ function validate(route: DriverRoute, input: RouteActionInput): void {
     case 'route_start':
       if (route.status !== 'planned') throw new Error('Esta rota já foi iniciada.');
       if (route.stops.length === 0) throw new Error('A rota não tem paradas.');
+      return;
+
+    case 'route_cancel':
+      if (route.status !== 'active') throw new Error('Só é possível cancelar uma rota em andamento.');
+      if (!input.reason || input.reason.trim().length < 3) {
+        throw new Error('Informe o motivo do cancelamento.');
+      }
       return;
 
     case 'route_finish': {
@@ -73,6 +82,7 @@ export async function performRouteAction(input: RouteActionInput): Promise<Drive
     ...position,
     ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
     ...(input.kind === 'stop_fail' ? { occurrence_type: input.occurrenceType } : {}),
+    ...(input.kind === 'route_cancel' ? { reason: input.reason?.trim() } : {}),
   };
 
   const item: NewOutboxItem = {
@@ -87,7 +97,7 @@ export async function performRouteAction(input: RouteActionInput): Promise<Drive
   await store.enqueue(item, updated);
 
   if (input.kind === 'route_start') await startTracking(input.routeId);
-  if (input.kind === 'route_finish') await stopTracking();
+  if (input.kind === 'route_finish' || input.kind === 'route_cancel') await stopTracking();
 
   await refreshSyncCounts();
   void requestSync();

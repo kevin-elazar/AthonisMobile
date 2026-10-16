@@ -40,6 +40,7 @@ export default function AppLayout() {
       <Stack.Screen name="route/[id]" options={{ title: 'Rota' }} />
       <Stack.Screen name="stop/[orderId]" options={{ title: 'Parada' }} />
       <Stack.Screen name="occurrence" options={{ title: 'Não entregue' }} />
+      <Stack.Screen name="cancel-route" options={{ title: 'Cancelar rota' }} />
       <Stack.Screen name="sync" options={{ title: 'Sincronização', headerRight: undefined }} />
       <Stack.Screen name="profile" options={{ title: 'Minha conta' }} />
     </Stack>

@@ -450,6 +450,21 @@ describe('applyAction', () => {
     expect(result.stops[0].status).toBe('planned');
   });
 
+  it('o cancelamento tira a rota de andamento e não mexe nas paradas já baixadas', () => {
+    const emAndamento = applyAction(route(1, { status: 'active' }), action(1, 'stop_deliver', 11, 5));
+
+    const result = applyAction(emAndamento, action(1, 'route_cancel', null, 9));
+
+    expect(result.status).toBe('cancelled');
+    expect(result.stops[0].status).toBe('delivered');
+  });
+
+  it('cancelar uma rota que não está em andamento não muda nada', () => {
+    const planejada = route(1);
+
+    expect(applyAction(planejada, action(1, 'route_cancel'))).toBe(planejada);
+  });
+
   it('não altera o objeto recebido', () => {
     const original = route(1);
     const copia = structuredClone(original);

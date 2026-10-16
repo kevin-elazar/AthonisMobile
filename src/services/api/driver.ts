@@ -39,6 +39,8 @@ function actionPath(item: OutboxItem): string {
       return `${route}/start`;
     case 'route_finish':
       return `${route}/finish`;
+    case 'route_cancel':
+      return `${route}/cancel`;
     case 'stop_arrive':
       return `${route}/stops/${item.order_id}/arrive`;
     case 'stop_deliver':

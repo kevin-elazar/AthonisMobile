@@ -14,6 +14,7 @@ export const OUTBOX_KINDS = [
   'stop_deliver',
   'stop_fail',
   'route_finish',
+  'route_cancel',
 ] as const;
 export type OutboxKind = (typeof OUTBOX_KINDS)[number];
 
@@ -33,6 +34,8 @@ export interface OutboxPayload {
   accuracy_m?: number;
   notes?: string;
   occurrence_type?: OccurrenceType;
+  /** Motivo do cancelamento da rota. */
+  reason?: string;
 }
 
 export interface OutboxItem {
@@ -71,4 +74,5 @@ export const OUTBOX_KIND_LABELS: Record<OutboxKind, string> = {
   stop_deliver: 'Entrega',
   stop_fail: 'Ocorrência',
   route_finish: 'Encerramento da rota',
+  route_cancel: 'Cancelamento da rota',
 };

@@ -259,6 +259,20 @@ export default function RouteScreen() {
           isNext={proxima?.order_id === stop.order_id}
         />
       ))}
+
+      {/* No fim da lista, longe do polegar: cancelar é exceção, não o próximo passo. */}
+      {route.status === 'active' ? (
+        <Button
+          label="Cancelar rota"
+          icon="close-circle-outline"
+          variant="ghost"
+          onPress={() =>
+            router.push({ pathname: '/cancel-route', params: { routeId: route.route_id } })
+          }
+          disabled={action.isPending}
+          testID="route-cancel"
+        />
+      ) : null}
     </Screen>
   );
 }

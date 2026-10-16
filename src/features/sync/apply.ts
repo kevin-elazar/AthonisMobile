@@ -58,6 +58,11 @@ export function applyAction(route: DriverRoute, action: Action): DriverRoute {
     case 'route_finish':
       if (route.status !== 'active') return route;
       return { ...route, status: 'completed', finished_at: at };
+
+    case 'route_cancel':
+      // As paradas em aberto voltam para o escritório; a rota sai da lista do entregador.
+      if (route.status !== 'active') return route;
+      return { ...route, status: 'cancelled' };
   }
 }
 
