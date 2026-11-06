@@ -57,7 +57,7 @@ jobs:
           path: coverage/
       - name: Análise
         if: ${{ env.SONAR_TOKEN != '' }}
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
       - name: Aviso de configuração
         if: ${{ env.SONAR_TOKEN == '' }}
         run: echo "::warning::SONAR_TOKEN não configurado; análise do SonarCloud pulada."
