@@ -20,13 +20,17 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://TROQUE-PELO-DOMINIO-DA-VM"
+        "EXPO_PUBLIC_API_URL": "https://TROQUE-PELO-DOMINIO-DA-VM",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://d162deda00ed7846af19815eaff5df9f@o4512382178164736.ingest.us.sentry.io/4512382195859456",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "staging"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://TROQUE-PELO-DOMINIO-DA-VM"
+        "EXPO_PUBLIC_API_URL": "https://TROQUE-PELO-DOMINIO-DA-VM",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://d162deda00ed7846af19815eaff5df9f@o4512382178164736.ingest.us.sentry.io/4512382195859456",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production"
       },
       "android": {
         "buildType": "apk"
