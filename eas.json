@@ -27,6 +27,9 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://TROQUE-PELO-DOMINIO-DA-VM"
+      },
+      "android": {
+        "buildType": "apk"
       }
     }
   }

@@ -1,0 +1,97 @@
+# Integração contínua do aplicativo do entregador (Expo).
+#
+# Em todo push e pull request: lint, typecheck e testes com cobertura, e
+# análise no SonarCloud. Em tag v* (ex.: v1.2.0), gera o APK pelo EAS Build e
+# publica numa GitHub Release: é o link que vai no QR Code do pôster.
+name: CI
+
+on:
+  push:
+    branches: [main, desenvMobile]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade:
+    name: Lint, typecheck e testes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx expo lint
+      - run: npx tsc --noEmit
+      - name: Testes com cobertura
+        run: npx jest --coverage --coverageReporters=lcov --coverageReporters=text-summary
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  sonarcloud:
+    name: SonarCloud
+    needs: qualidade
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+      - name: Análise
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@v5
+      - name: Aviso de configuração
+        if: ${{ env.SONAR_TOKEN == '' }}
+        run: echo "::warning::SONAR_TOKEN não configurado; análise do SonarCloud pulada."
+
+  apk:
+    name: APK (EAS Build) e Release
+    needs: qualidade
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Conferir token do Expo
+        run: '[ -n "$EXPO_TOKEN" ] || { echo "::error::EXPO_TOKEN não configurado (veja SETUP_CONTAS.md)"; exit 1; }'
+      - name: Build do APK de produção no EAS (espera terminar)
+        id: eas
+        run: |
+          npx eas-cli@latest build --platform android --profile production --non-interactive --wait --json > build.json
+          url=$(node -e "const b=require('./build.json');console.log((Array.isArray(b)?b[0]:b).artifacts.buildUrl)")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          curl -fsSL "$url" -o "athonis-entregas-${GITHUB_REF_NAME}.apk"
+      - name: Publicar na GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: athonis-entregas-${{ github.ref_name }}.apk
+          generate_release_notes: true
+          body: |
+            APK do aplicativo do entregador, apontando para a API de produção.
+            Instalação: baixe o arquivo no celular Android e permita "instalar de fontes desconhecidas".
