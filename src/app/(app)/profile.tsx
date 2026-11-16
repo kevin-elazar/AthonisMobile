@@ -1,11 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useState } from 'react';
+import { Linking } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
+import {
+  formatConsentDate,
+  getLocationConsent,
+  privacyPolicyUrl,
+  type LocationConsent,
+} from '@/features/consent/location-consent';
 import { confirm } from '@/lib/confirm';
 import { API_URL } from '@/lib/env';
 import { plural } from '@/lib/format';
@@ -28,6 +37,8 @@ export default function ProfileScreen() {
   const queryClient = useQueryClient();
   const [leaving, setLeaving] = useState(false);
   const [tracking, setTracking] = useState<TrackingMode>('off');
+  const [consent, setConsent] = useState<LocationConsent | null>(null);
+  const router = useRouter();
 
   // A empresa vem do servidor; sem rede, a tela mostra só o que está na sessão.
   const { data: profile } = useQuery({
@@ -36,9 +47,19 @@ export default function ProfileScreen() {
     retry: false,
   });
 
-  useEffect(() => {
-    void trackingMode().then(setTracking);
-  }, []);
+  // Recarrega ao voltar da tela de consentimento ou das configurações.
+  useFocusEffect(
+    useCallback(() => {
+      void trackingMode().then(setTracking);
+      void getLocationConsent().then(setConsent);
+    }, []),
+  );
+
+  const consentDate = formatConsentDate(consent);
+  const openPolicy = () => {
+    const url = privacyPolicyUrl();
+    void WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url));
+  };
 
   const naoEnviado = sync.pending + sync.pings;
 
@@ -94,6 +115,37 @@ export default function ProfileScreen() {
         </Text>
       </Card>
 
+      <Card testID="profile-privacy">
+        <Text variant="label" tone="muted">
+          Privacidade
+        </Text>
+        <Text>
+          {consent && consentDate
+            ? `Registro de trajeto ${consent.accepted ? 'permitido' : 'recusado'} em ${consentDate}.`
+            : 'Você ainda não decidiu sobre o registro de trajeto.'}
+        </Text>
+        <Button
+          label="Rever consentimento de localização"
+          icon="navigate-outline"
+          variant="secondary"
+          onPress={() => router.push('/location-consent')}
+          testID="profile-consent"
+        />
+        <Button
+          label="Permissões do aparelho"
+          icon="settings-outline"
+          variant="ghost"
+          onPress={() => void Linking.openSettings()}
+        />
+        <Button
+          label="Política de privacidade"
+          icon="document-text-outline"
+          variant="ghost"
+          onPress={openPolicy}
+          testID="profile-policy"
+        />
+      </Card>
+
       {naoEnviado > 0 ? (
         <Notice tone="warning">
           {`Há ${plural(sync.pending, 'ação', 'ações')} e ${plural(sync.pings, 'ponto de trajeto', 'pontos de trajeto')} aguardando envio.`}
@@ -101,7 +153,8 @@ export default function ProfileScreen() {
       ) : null}
 
       <Text variant="caption" tone="muted" align="center">
-        Versão {Constants.expoConfig?.version ?? '—'} · {API_URL}
+        Athonis Entregas · versão {Constants.expoConfig?.version ?? '—'} · {API_URL}
+        {'\n'}TCC de Engenharia de Software · Católica SC
       </Text>
     </Screen>
   );

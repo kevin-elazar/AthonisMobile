@@ -43,6 +43,10 @@ export default function AppLayout() {
       <Stack.Screen name="cancel-route" options={{ title: 'Cancelar rota' }} />
       <Stack.Screen name="sync" options={{ title: 'Sincronização', headerRight: undefined }} />
       <Stack.Screen name="profile" options={{ title: 'Minha conta' }} />
+      <Stack.Screen
+        name="location-consent"
+        options={{ title: 'Localização', presentation: 'modal', headerRight: undefined }}
+      />
     </Stack>
   );
 }

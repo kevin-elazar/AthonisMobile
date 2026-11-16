@@ -28,36 +28,42 @@ import {
 } from '@/lib/format';
 import { formatAddress } from '@/lib/maps';
 import { errorMessage } from '@/services/api/errors';
-import { grantedTrackingMode, requestTrackingPermissions } from '@/services/location/tracking';
-import { store } from '@/services/store';
+import {
+  needsLocationConsent,
+  saveLocationConsent,
+  waitForConsentDecision,
+} from '@/features/consent/location-consent';
+import { grantedTrackingMode } from '@/services/location/tracking';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
-const PERMISSION_ASKED_KEY = 'tracking.permissionAsked';
-
 /**
- * Explica o motivo antes de o sistema mostrar o diálogo de permissão, uma
- * única vez. Recusar não impede a rota: ela segue sem medição de trajeto.
+ * Antes da primeira rota, abre a tela que explica a coleta de localização
+ * (consentimento) e só então o diálogo do sistema. Recusar não impede a
+ * rota: ela segue sem medição de trajeto.
  */
-async function askTrackingPermissionOnce(): Promise<void> {
+async function askTrackingConsent(router: ReturnType<typeof useRouter>): Promise<void> {
   if (Platform.OS === 'web') return;
-  if ((await grantedTrackingMode()) === 'background') return;
-  if (await store.getValue(PERMISSION_ASKED_KEY)) return;
-
-  await store.setValue(PERMISSION_ASKED_KEY, '1');
-
-  const aceitou = await confirm({
-    title: 'Registrar o trajeto da rota?',
-    message:
-      'Com a rota em andamento, o Athonis registra por onde o veículo passou, mesmo com a tela apagada, para comparar a rota planejada com a executada.\n\nA localização só é lida enquanto há uma rota em andamento. Na próxima tela, escolha "Permitir o tempo todo".',
-    confirmLabel: 'Continuar',
-    cancelLabel: 'Agora não',
-  });
-
-  if (aceitou) await requestTrackingPermissions();
+  if (!(await needsLocationConsent())) return;
+  if ((await grantedTrackingMode()) === 'background') {
+    // Permissão já dada no sistema (ex.: reinstalação): registra a decisão.
+    await saveLocationConsent(true);
+    return;
+  }
+  const decision = waitForConsentDecision();
+  router.push('/location-consent');
+  await decision;
 }
 
-function StopRow({ stop, route, isNext }: { stop: DriverStop; route: DriverRoute; isNext: boolean }) {
+function StopRow({
+  stop,
+  route,
+  isNext,
+}: {
+  stop: DriverStop;
+  route: DriverRoute;
+  isNext: boolean;
+}) {
   const router = useRouter();
   const theme = useTheme();
   const done = isFinalStop(stop);
@@ -76,15 +82,9 @@ function StopRow({ stop, route, isNext }: { stop: DriverStop; route: DriverRoute
     >
       <View style={styles.stopHeader}>
         <View
-          style={[
-            styles.sequence,
-            { backgroundColor: done ? theme.surfaceMuted : theme.primary },
-          ]}
+          style={[styles.sequence, { backgroundColor: done ? theme.surfaceMuted : theme.primary }]}
         >
-          <Text
-            weight="semibold"
-            style={{ color: done ? theme.muted : theme.primaryForeground }}
-          >
+          <Text weight="semibold" style={{ color: done ? theme.muted : theme.primaryForeground }}>
             {stop.stop_sequence ?? '–'}
           </Text>
         </View>
@@ -142,7 +142,7 @@ export default function RouteScreen() {
   const run = async (kind: 'route_start' | 'route_finish') => {
     setFailure(null);
     try {
-      if (kind === 'route_start') await askTrackingPermissionOnce();
+      if (kind === 'route_start') await askTrackingConsent(router);
       await action.mutateAsync({ kind, routeId });
     } catch (error) {
       setFailure(errorMessage(error));
