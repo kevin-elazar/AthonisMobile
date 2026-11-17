@@ -41,4 +41,5 @@ A empresa já gerava rotas otimizadas, mas perdia o rastro depois que o caminhã
 10. [[Testes e Qualidade|Testes-e-Qualidade]]
 11. [[Segurança e LGPD|Seguranca-e-LGPD]]
 12. [[Instalação|Instalacao]] — rodar localmente e instalar o APK
-13. [[Piloto e Aceite|Piloto-e-Aceite]]
+13. [[Manual de Uso|Manual-de-Uso]] — guia do painel e do app para a empresa
+14. [[Piloto e Aceite|Piloto-e-Aceite]]

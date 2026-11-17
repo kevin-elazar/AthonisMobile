@@ -3,6 +3,7 @@
 O piloto valida o Athonis em operação real na **Forte Acessórios para Móveis** e produz os números da seção de Resultados do artigo.
 
 - **Roteiro completo:** [`docs/piloto.md`](https://github.com/kevin-elazar/AthonisMobile/blob/desenvMobile/docs/piloto.md): preparação, execução diária, dados a coletar, teste de GPS e critérios de sucesso.
+- **Relatório de validação com o parceiro (demos, feedback, issues):** [`docs/validacao-parceiro.md`](https://github.com/kevin-elazar/AthonisMobile/blob/desenvMobile/docs/validacao-parceiro.md).
 - **Modelo do termo de aceite:** [`docs/termo-de-aceite.md`](https://github.com/kevin-elazar/AthonisMobile/blob/desenvMobile/docs/termo-de-aceite.md), assinado pelo responsável da empresa ao fim do piloto.
 
 ## Resumo

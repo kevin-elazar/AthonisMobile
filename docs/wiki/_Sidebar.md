@@ -17,6 +17,7 @@
 - [[Testes e Qualidade|Testes-e-Qualidade]]
 - [[Segurança e LGPD|Seguranca-e-LGPD]]
 - [[Instalação|Instalacao]]
+- [[Manual de Uso|Manual-de-Uso]]
 
 **Validação**
 - [[Piloto e Aceite|Piloto-e-Aceite]]
