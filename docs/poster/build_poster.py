@@ -313,7 +313,7 @@ arrow(A + 30.8, 88.2, A + 30.8, 89.4)                  # vps -> sentry
 # ===================================================== resultados
 
 set_paragraphs(by_text("Aqui insira"), [
-    bullet(B("v1.0.0 em produção: "), N("APK, painel e API com HTTPS, em ambientes de staging e produção.")),
+    bullet(B("v1.0.1 em produção: "), N("APK, painel e API com HTTPS, em ambientes de staging e produção.")),
     bullet(B("Qualidade: "), N("CI em todo commit (lint, tipos, testes e SonarCloud). Backend com 221 "
            "testes (80,8% de cobertura), painel com 136 e app com 46, focados na fila offline e no "
            "cálculo planejado × executado.")),
