@@ -6,7 +6,7 @@ Três camadas: **saúde** (o serviço está de pé?), **métricas** (como está 
 |---|---|---|
 | Saúde | `GET /health` (NestJS Terminus) | API no ar e banco respondendo. Usado pelo healthcheck do Docker, pelo `deploy.sh` (rollback se falhar) e pela conferência externa do CI |
 | Métricas | Prometheus + Grafana | Requisições, latência, erros e recursos da VPS |
-| Erros | Sentry | Exceções da API (`@sentry/nestjs`) e do painel (`@sentry/nextjs`, navegador e servidor), com ambiente `production`/`staging` |
+| Erros | Sentry | Exceções da API (`@sentry/nestjs`), do painel (`@sentry/nextjs`, navegador e servidor) e do **aplicativo** (`@sentry/react-native`, a partir da v1.0.2), com ambiente `production`/`staging` e sem dados pessoais |
 
 ## Métricas
 
@@ -27,7 +27,7 @@ O Grafana (`https://grafana.<domínio>`, login `admin`, senha no `.env` do servi
 
 ## Aplicativo
 
-O app registra no próprio aparelho o que importa para a operação e mostra ao motorista: itens pendentes ou recusados pela API (tela de sincronização) e o estado do rastreamento (em "Minha conta"). No servidor, o volume de pontos de GPS por rota (`ping_count` em `route_execution_metrics`) mostra se o rastreamento em segundo plano funcionou no aparelho.
+No aparelho, o Sentry captura travamentos e erros de JavaScript e nativos (inicializado em `src/services/observability/sentry.ts`, só nos perfis `preview` e `production`). Além disso, o app registra no próprio aparelho o que importa para a operação e mostra ao motorista: itens pendentes ou recusados pela API (tela de sincronização) e o estado do rastreamento (em "Minha conta"). No servidor, o volume de pontos de GPS por rota (`ping_count` em `route_execution_metrics`) mostra se o rastreamento em segundo plano funcionou no aparelho.
 
 ## Rotina
 

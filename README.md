@@ -62,6 +62,7 @@ No app, o padrão é MVC: **models** em `src/features/*/model.ts` (schemas Zod),
 | Estado e formulários | TanStack Query, React Hook Form + Zod |
 | API | NestJS 11 + TypeORM + PostgreSQL 17 |
 | Painel | Next.js 16 (React 19) |
+| Observabilidade | Sentry (`@sentry/react-native`): erros e travamentos no aparelho |
 | Qualidade e entrega | GitHub Actions, SonarCloud, EAS Build (APK na release) |
 
 ## Como rodar

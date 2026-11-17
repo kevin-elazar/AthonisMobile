@@ -2,6 +2,8 @@
 // aplicativo, antes de qualquer tela: é só isto que roda quando o sistema
 // acorda o app para entregar uma leitura.
 import '@/services/location/tracking';
+// Sentry antes das telas, para capturar erros desde a abertura.
+import { withSentry } from '@/services/observability/sentry';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -24,7 +26,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+function RootLayout() {
   const theme = useTheme();
   const { hydrated, session } = useSession();
 
@@ -56,3 +58,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default withSentry(RootLayout);
