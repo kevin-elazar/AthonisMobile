@@ -22,9 +22,10 @@ A empresa já gerava rotas otimizadas, mas perdia o rastro depois que o caminhã
 ## Links
 
 - **APK do aplicativo:** [GitHub Releases](https://github.com/kevin-elazar/AthonisMobile/releases/latest)
-- **Painel (staging):** https://staging-app.187-53-99-235.sslip.io
-- **API (staging):** https://staging-api.187-53-99-235.sslip.io/health
-- **Política de privacidade:** https://app.187-53-99-235.sslip.io/privacidade
+- **Painel (produção):** https://app.athonis.seletohub.cloud
+- **Painel (staging):** https://staging-app.athonis.seletohub.cloud
+- **API (staging):** https://staging-api.athonis.seletohub.cloud/health
+- **Política de privacidade:** https://app.athonis.seletohub.cloud/privacidade
 
 ## Páginas
 

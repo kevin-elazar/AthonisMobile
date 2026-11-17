@@ -40,5 +40,5 @@ A empresa contratante é a **controladora**; o Athonis trata os dados em nome de
 ## Riscos conhecidos
 
 - **Acesso root de terceiro à VPS:** o servidor foi cedido por um colega, que tem acesso administrativo. Está declarado na política, no termo do piloto e no [[ADR-06|Decisoes-de-Arquitetura]].
-- **Domínio sslip.io:** algumas redes corporativas bloqueiam o domínio; o plano é migrar para domínio próprio antes do Demo Day.
+- **Domínio de terceiro:** o sistema usa `athonis.seletohub.cloud`, subdomínio do domínio de quem cede a VPS (o sslip.io usado antes era bloqueado por filtros corporativos). Se o domínio deixar de existir, é preciso trocar o DNS, o servidor e gerar novo APK.
 - **Repositório público com histórico antigo:** um arquivo SQLite de desenvolvimento ficou no histórico do backend; segundo o autor, contém apenas dados de teste.
