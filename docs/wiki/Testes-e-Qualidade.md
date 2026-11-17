@@ -5,7 +5,7 @@ Todo push e PR passa pelo CI do GitHub Actions nos três repositórios: **lint �
 | Repositório | Ferramentas | Testes | Cobertura | Limite no CI |
 |---|---|---|---|---|
 | AthonisBackend | Jest, Supertest, PostgreSQL no CI | 221 (unitários + e2e) | 80,8% das linhas (SonarCloud) | 80% linhas / 70% branches (`jest.coverage.config.js`) |
-| athonis-front-end | Vitest, Testing Library | 136 | 38% das linhas | 30% linhas (`vitest.config.ts`) |
+| athonis-front-end | Vitest, Testing Library | 152 | 62% das linhas | 30% linhas (`vitest.config.ts`) |
 | AthonisMobile | Jest (jest-expo) | 46 | 95% das linhas dos módulos testados | — |
 
 ## O que é testado

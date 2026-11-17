@@ -16,7 +16,7 @@
 | Fase 7 (PostgreSQL) | Feito: PostgreSQL 17 com migrations; e2e rodam contra PostgreSQL no CI |
 | Fase 8 (iOS) | Não feita (opcional) |
 | Fase 9 (entrega acadêmica) | Wiki publicada, READMEs, ADRs, C4, DER, sequência offline, pôster (`docs/poster/`) e ajustes do artigo (`docs/ajustes-artigo-pac7.md`). Falta inserir os números do piloto |
-| Qualidade | Backend 221 testes (80,8% de cobertura), painel 136, app 46; SonarCloud nos três repositórios |
+| Qualidade | Backend 221 testes (80,8% de cobertura), painel 152 (62%), app 46; SonarCloud nos três repositórios |
 | Releases | API e painel em produção (v1.0.0 / v1.0.1); APK v1.0.1 na GitHub Release |
 
 Mudanças em relação ao plano original, decididas durante a implementação (as ADRs da Wiki explicam cada uma):
