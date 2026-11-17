@@ -7,16 +7,25 @@
 
 ---
 
-## Estado atual (12/10/2026)
+## Estado atual (17/11/2026)
 
 | Parte | Situação |
 |---|---|
-| Backend — Fases 1, 3, 4 e 5 | Feito. 148 testes unitários e 42 e2e passando |
-| Mobile — Fases 2 e 3 | Feito e conferido rodando no navegador: login, rotas do dia, saída, chegada, entrega, ocorrência, encerramento, sincronização e logout |
-| Mobile — fila offline | Conferida com o backend desligado: três ações ficaram pendentes e subiram sozinhas quando ele voltou, em ordem e com a hora original |
-| Mobile — Fase 4 (GPS) | Código escrito e coberto pelos testes da fila, mas **não testado em aparelho**: o navegador não tem rastreamento. Exige o APK de desenvolvimento |
-| Web — acesso do motorista, situação "não entregue", painel de execução em campo | Feito e conferido no navegador com os dados da rota executada pelo app |
-| Fases 6 a 9 | Não iniciadas |
+| Fases 0 a 5 (backend do app, aplicativo, fila offline, GPS, análise comparativa e painel) | Feito. Conferido no navegador; GPS em segundo plano depende do teste em aparelho (APK v1.0.1) |
+| Fase 6 (publicação e piloto) | Publicação feita: VPS Linux com Docker Compose, HTTPS em `athonis.seletohub.cloud`, staging e produção, CI/CD sem SSH, Prometheus/Grafana, Sentry. **Piloto pendente** (roteiro em `docs/piloto.md`) |
+| Fase 7 (PostgreSQL) | Feito: PostgreSQL 17 com migrations; e2e rodam contra PostgreSQL no CI |
+| Fase 8 (iOS) | Não feita (opcional) |
+| Fase 9 (entrega acadêmica) | Wiki publicada, READMEs, ADRs, C4, DER, sequência offline, pôster (`docs/poster/`) e ajustes do artigo (`docs/ajustes-artigo-pac7.md`). Falta inserir os números do piloto |
+| Qualidade | Backend 221 testes (80,8% de cobertura), painel 136, app 46; SonarCloud nos três repositórios |
+| Releases | API e painel em produção (v1.0.0 / v1.0.1); APK v1.0.1 na GitHub Release |
+
+Mudanças em relação ao plano original, decididas durante a implementação (as ADRs da Wiki explicam cada uma):
+
+- Hospedagem: o plano previa VM própria; passou por Azure for Students e terminou numa VPS da Hostinger cedida por um colega (ADR-06), com deploy por runner self-hosted em vez de SSH (ADR-07).
+- Domínio: `sslip.io` foi trocado por `athonis.seletohub.cloud` porque filtros corporativos bloqueiam DNS dinâmico.
+- Consentimento de localização numa tela própria, com a decisão registrada (LGPD), em vez de um alerta simples.
+
+As listas de tarefas das fases abaixo são o plano como foi escrito; o estado real é a tabela acima.
 
 Para rodar tudo localmente: `npm run start:dev` no backend, `node scripts/seed-driver-demo.js` no backend (a rota é criada para o dia de hoje; rode de novo a cada dia), `npm run web` no mobile e `npm run dev` no front-end.
 
