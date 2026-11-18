@@ -33,7 +33,8 @@ function validate(route: DriverRoute, input: RouteActionInput): void {
       return;
 
     case 'route_cancel':
-      if (route.status !== 'active') throw new Error('Só é possível cancelar uma rota em andamento.');
+      if (route.status !== 'active')
+        throw new Error('Só é possível cancelar uma rota em andamento.');
       if (!input.reason || input.reason.trim().length < 3) {
         throw new Error('Informe o motivo do cancelamento.');
       }
@@ -60,14 +61,32 @@ function validate(route: DriverRoute, input: RouteActionInput): void {
   }
 }
 
+/** Ações em andamento por rota: cada nova espera a anterior da mesma rota. */
+const chains = new Map<number, Promise<unknown>>();
+
 /**
  * Registra uma ação do entregador.
  *
  * Grava primeiro no aparelho — fila e rota já atualizada, na mesma transação
  * — e só então tenta a rede. A tela não espera o servidor: sem sinal, a ação
  * fica na fila e sobe sozinha depois, com a hora em que foi feita.
+ *
+ * As ações de uma mesma rota acontecem uma de cada vez, e cada uma relê e
+ * valida a rota só quando chega a sua vez: um toque duplo em "Iniciar rota"
+ * enfileira uma saída só; o segundo toque é recusado pela validação.
  */
-export async function performRouteAction(input: RouteActionInput): Promise<DriverRoute> {
+export function performRouteAction(input: RouteActionInput): Promise<DriverRoute> {
+  const previous = chains.get(input.routeId) ?? Promise.resolve();
+  const result = previous.then(() => perform(input));
+  const tail = result.catch(() => undefined);
+  chains.set(input.routeId, tail);
+  void tail.then(() => {
+    if (chains.get(input.routeId) === tail) chains.delete(input.routeId);
+  });
+  return result;
+}
+
+async function perform(input: RouteActionInput): Promise<DriverRoute> {
   const route = await store.getRoute(input.routeId);
   if (!route) throw new Error('Rota não encontrada neste aparelho. Atualize a lista.');
 

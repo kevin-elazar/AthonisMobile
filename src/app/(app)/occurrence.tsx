@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,7 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useRouteAction } from '@/features/routes/hooks';
-import {
-  OCCURRENCE_LABELS,
-  OCCURRENCE_TYPES,
-  type OccurrenceType,
-} from '@/features/routes/model';
+import { OCCURRENCE_LABELS, OCCURRENCE_TYPES, type OccurrenceType } from '@/features/routes/model';
 import { errorMessage } from '@/services/api/errors';
 import { MIN_TOUCH, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -28,13 +24,16 @@ export default function OccurrenceScreen() {
   const [type, setType] = useState<OccurrenceType | null>(null);
   const [notes, setNotes] = useState(params.notes ?? '');
   const [failure, setFailure] = useState<string | null>(null);
+  // Trava contra toque duplo: bloqueia na hora, antes de a mutação mudar de estado.
+  const busy = useRef(false);
 
   // "Outro motivo" sem explicação não diz nada a quem lê o painel depois.
   const notesRequired = type === 'other';
   const canSubmit = !!type && (!notesRequired || notes.trim().length > 0);
 
   const submit = async () => {
-    if (!type) return;
+    if (!type || busy.current) return;
+    busy.current = true;
     setFailure(null);
     try {
       await action.mutateAsync({
@@ -48,6 +47,8 @@ export default function OccurrenceScreen() {
       router.dismissTo({ pathname: '/route/[id]', params: { id: routeId } });
     } catch (error) {
       setFailure(errorMessage(error));
+    } finally {
+      busy.current = false;
     }
   };
 

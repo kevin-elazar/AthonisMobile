@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { getLocationConsent } from '@/features/consent/location-consent';
 import type { PingRow } from '@/features/sync/model';
 import { uuid } from '@/lib/uuid';
 import { store } from '@/services/store';
@@ -12,6 +13,9 @@ import { requestSync } from '@/services/sync';
  * aplicativo não lê a posição de ninguém. No Android o rastreamento roda
  * como serviço em primeiro plano, com notificação fixa, que é o que o
  * sistema exige para continuar lendo o GPS com a tela apagada.
+ *
+ * Nada é lido sem o consentimento registrado do motorista logado (LGPD):
+ * a permissão do sistema sozinha não basta.
  */
 
 const TASK_NAME = 'athonis-route-tracking';
@@ -112,11 +116,23 @@ export async function grantedTrackingMode(): Promise<TrackingMode> {
   }
 }
 
+/** O motorista logado aceitou o registro do trajeto? Sem decisão, vale como não. */
+async function hasConsent(): Promise<boolean> {
+  try {
+    return (await getLocationConsent())?.accepted === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Liga o rastreamento da rota no melhor modo que as permissões permitem.
- * Nunca lança erro: sem GPS a rota continua, apenas sem trajeto medido.
+ * Sem consentimento registrado, não liga nada. Nunca lança erro: sem GPS a
+ * rota continua, apenas sem trajeto medido.
  */
 export async function startTracking(routeId: number): Promise<TrackingMode> {
+  if (!(await hasConsent())) return 'off';
+
   await store.setValue(ROUTE_KEY, String(routeId));
   const granted = await grantedTrackingMode();
   if (granted === 'off') return 'off';
@@ -197,6 +213,8 @@ export async function reconcileTracking(activeRouteId: number | null): Promise<v
 export async function lastKnownPosition(): Promise<
   { latitude: number; longitude: number; accuracy_m?: number } | undefined
 > {
+  if (!(await hasConsent())) return undefined;
+
   try {
     const permission = await Location.getForegroundPermissionsAsync();
     if (!permission.granted) return undefined;

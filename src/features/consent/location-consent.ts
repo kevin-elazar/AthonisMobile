@@ -1,4 +1,5 @@
 import { API_URL } from '@/lib/env';
+import { getSession } from '@/services/session';
 import { store } from '@/services/store';
 
 /**
@@ -10,10 +11,19 @@ import { store } from '@/services/store';
  * texto: se o texto mudar (nova versão), o motorista é perguntado de novo.
  *
  * Recusar não impede o trabalho: a rota segue, só sem trajeto medido.
+ *
+ * A decisão é de cada motorista: num aparelho compartilhado, o aceite de um
+ * não vale para o outro. Por isso fica gravada com o id do usuário logado.
  */
 
 export const CONSENT_VERSION = 1;
 const CONSENT_KEY = 'consent.location';
+
+/** Chave da decisão do usuário logado. Sem sessão, cai numa chave genérica. */
+export function consentKey(): string {
+  const userId = getSession()?.user.id;
+  return userId != null ? `${CONSENT_KEY}.${userId}` : CONSENT_KEY;
+}
 
 export interface LocationConsent {
   version: number;
@@ -23,7 +33,7 @@ export interface LocationConsent {
 }
 
 export async function getLocationConsent(): Promise<LocationConsent | null> {
-  const raw = await store.getValue(CONSENT_KEY);
+  const raw = await store.getValue(consentKey());
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<LocationConsent>;
@@ -47,7 +57,7 @@ export async function saveLocationConsent(
     accepted,
     decidedAt: now.toISOString(),
   };
-  await store.setValue(CONSENT_KEY, JSON.stringify(consent));
+  await store.setValue(consentKey(), JSON.stringify(consent));
   return consent;
 }
 

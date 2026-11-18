@@ -1,13 +1,9 @@
 import { MemoryStore } from '@/services/store/memory-store';
 
-jest.mock('@/services/store', () => {
-  const { MemoryStore: Store } = jest.requireActual('@/services/store/memory-store');
-  return { store: new Store() };
-});
-
 import { store } from '@/services/store';
 import {
   CONSENT_VERSION,
+  consentKey,
   formatConsentDate,
   getLocationConsent,
   needsLocationConsent,
@@ -17,6 +13,16 @@ import {
   waitForConsentDecision,
 } from '../location-consent';
 
+jest.mock('@/services/store', () => {
+  const { MemoryStore: Store } = jest.requireActual('@/services/store/memory-store');
+  return { store: new Store() };
+});
+
+let mockUserId: number | null = 7;
+jest.mock('@/services/session', () => ({
+  getSession: () => (mockUserId == null ? null : { user: { id: mockUserId } }),
+}));
+
 /**
  * O consentimento da localização é o que a LGPD e o Google Play cobram de um
  * app que lê GPS em segundo plano: precisa ser explicado antes, registrado e
@@ -24,7 +30,8 @@ import {
  */
 
 beforeEach(async () => {
-  await store.setValue('consent.location', null);
+  mockUserId = 7;
+  await store.clear();
 });
 
 describe('registro do consentimento', () => {
@@ -61,10 +68,31 @@ describe('registro do consentimento', () => {
     expect(await needsLocationConsent()).toBe(true);
   });
 
-  it('ignora registro corrompido', async () => {
-    await store.setValue('consent.location', '{quebrado');
+  it('a decisão de um motorista não vale para outro no mesmo aparelho', async () => {
+    await saveLocationConsent(true);
+    expect(await store.getValue('consent.location.7')).not.toBeNull();
+
+    mockUserId = 8;
+    expect(consentKey()).toBe('consent.location.8');
     expect(await getLocationConsent()).toBeNull();
-    await store.setValue('consent.location', JSON.stringify({ accepted: 'sim' }));
+    expect(await needsLocationConsent()).toBe(true);
+
+    await saveLocationConsent(false);
+    mockUserId = 7;
+    expect((await getLocationConsent())?.accepted).toBe(true);
+  });
+
+  it('sem sessão, usa a chave genérica', async () => {
+    mockUserId = null;
+    expect(consentKey()).toBe('consent.location');
+    await saveLocationConsent(true);
+    expect(await store.getValue('consent.location')).not.toBeNull();
+  });
+
+  it('ignora registro corrompido', async () => {
+    await store.setValue('consent.location.7', '{quebrado');
+    expect(await getLocationConsent()).toBeNull();
+    await store.setValue('consent.location.7', JSON.stringify({ accepted: 'sim' }));
     expect(await getLocationConsent()).toBeNull();
   });
 });

@@ -12,7 +12,7 @@ import {
   resolveConsentDecision,
   saveLocationConsent,
 } from '@/features/consent/location-consent';
-import { requestTrackingPermissions } from '@/services/location/tracking';
+import { requestTrackingPermissions, stopTracking } from '@/services/location/tracking';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
@@ -62,7 +62,9 @@ export default function LocationConsentScreen() {
     setBusy(true);
     decided.current = true;
     await saveLocationConsent(accepted);
+    // Recusar (ou revogar pelo perfil) desliga na hora um rastreamento em andamento.
     if (accepted) await requestTrackingPermissions();
+    else await stopTracking();
     resolveConsentDecision(accepted);
     if (router.canGoBack()) router.back();
   };

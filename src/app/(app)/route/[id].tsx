@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { RouteStatusBadge, StopStatusBadge } from '@/components/domain/status-badges';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,7 @@ import {
 } from '@/lib/format';
 import { formatAddress } from '@/lib/maps';
 import { errorMessage } from '@/services/api/errors';
-import {
-  needsLocationConsent,
-  saveLocationConsent,
-  waitForConsentDecision,
-} from '@/features/consent/location-consent';
-import { grantedTrackingMode } from '@/services/location/tracking';
+import { needsLocationConsent, waitForConsentDecision } from '@/features/consent/location-consent';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
@@ -41,15 +36,14 @@ import { useTheme } from '@/theme/use-theme';
  * Antes da primeira rota, abre a tela que explica a coleta de localização
  * (consentimento) e só então o diálogo do sistema. Recusar não impede a
  * rota: ela segue sem medição de trajeto.
+ *
+ * A tela abre sempre que o motorista logado ainda não decidiu, mesmo que o
+ * sistema já tenha a permissão concedida (outro motorista no aparelho, ou
+ * reinstalação): permissão do sistema não é consentimento registrado.
  */
 async function askTrackingConsent(router: ReturnType<typeof useRouter>): Promise<void> {
   if (Platform.OS === 'web') return;
   if (!(await needsLocationConsent())) return;
-  if ((await grantedTrackingMode()) === 'background') {
-    // Permissão já dada no sistema (ex.: reinstalação): registra a decisão.
-    await saveLocationConsent(true);
-    return;
-  }
   const decision = waitForConsentDecision();
   router.push('/location-consent');
   await decision;
@@ -138,18 +132,26 @@ export default function RouteScreen() {
   const { data: route, isPending } = useRoute(routeId);
   const action = useRouteAction();
   const [failure, setFailure] = useState<string | null>(null);
+  // Trava contra toque duplo: o estado da mutação só muda depois do
+  // consentimento, e um segundo toque nesse meio enfileiraria a ação duas vezes.
+  const busy = useRef(false);
 
   const run = async (kind: 'route_start' | 'route_finish') => {
+    if (busy.current) return;
+    busy.current = true;
     setFailure(null);
     try {
       if (kind === 'route_start') await askTrackingConsent(router);
       await action.mutateAsync({ kind, routeId });
     } catch (error) {
       setFailure(errorMessage(error));
+    } finally {
+      busy.current = false;
     }
   };
 
   const finish = async () => {
+    if (busy.current) return;
     const ok = await confirm({
       title: 'Encerrar a rota?',
       message: 'Depois de encerrar, não é possível alterar as paradas.',
