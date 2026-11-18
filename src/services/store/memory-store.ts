@@ -1,6 +1,6 @@
 import type { DriverRoute } from '@/features/routes/model';
 import type { NewOutboxItem, OutboxItem, OutboxStatus, PingRow } from '@/features/sync/model';
-import type { CachedRoutes, LocalStore, OutboxPatch } from './types';
+import type { CachedRoutes, LocalStore, MergePending, OutboxPatch } from './types';
 
 interface State {
   routes: DriverRoute[];
@@ -74,14 +74,41 @@ export class MemoryStore implements LocalStore {
   }
 
   async saveRoute(route: DriverRoute): Promise<void> {
-    const index = this.state.routes.findIndex((item) => item.route_id === route.route_id);
-    if (index >= 0) this.state.routes[index] = structuredClone(route);
-    else this.state.routes.push(structuredClone(route));
+    this.putRoute(route);
     this.commit();
   }
 
   async removeRoute(routeId: number): Promise<void> {
     this.state.routes = this.state.routes.filter((item) => item.route_id !== routeId);
+    this.commit();
+  }
+
+  // Sem `await` no meio: em JavaScript, ler a fila e gravar acontece de uma vez só.
+  private pendingOutbox(): OutboxItem[] {
+    return structuredClone(this.state.outbox.filter((item) => item.status === 'pending'));
+  }
+
+  private putRoute(route: DriverRoute): void {
+    const index = this.state.routes.findIndex((item) => item.route_id === route.route_id);
+    if (index >= 0) this.state.routes[index] = structuredClone(route);
+    else this.state.routes.push(structuredClone(route));
+  }
+
+  async saveServerRoute(route: DriverRoute, merge: MergePending): Promise<void> {
+    this.putRoute(merge(route, this.pendingOutbox()));
+    this.commit();
+  }
+
+  async replaceServerRoutes(
+    day: string,
+    routes: DriverRoute[],
+    fetchedAt: string,
+    merge: MergePending,
+  ): Promise<void> {
+    const pending = this.pendingOutbox();
+    this.state.routes = structuredClone(routes.map((route) => merge(route, pending)));
+    this.state.day = day;
+    this.state.fetchedAt = fetchedAt;
     this.commit();
   }
 
@@ -97,7 +124,8 @@ export class MemoryStore implements LocalStore {
       created_at: item.payload.occurred_at,
     };
     this.state.outbox.push(created);
-    await this.saveRoute(updatedRoute);
+    this.putRoute(updatedRoute);
+    this.commit();
     return structuredClone(created);
   }
 
@@ -134,6 +162,15 @@ export class MemoryStore implements LocalStore {
 
     const routeId = sorted[0].route_id;
     return structuredClone(sorted.filter((ping) => ping.route_id === routeId).slice(0, limit));
+  }
+
+  async takePingsForRoute(routeId: number, limit: number): Promise<PingRow[]> {
+    return structuredClone(
+      this.state.pings
+        .filter((ping) => ping.route_id === routeId)
+        .sort((a, b) => a.recorded_at.localeCompare(b.recorded_at))
+        .slice(0, limit),
+    );
   }
 
   async deletePings(ids: string[]): Promise<void> {

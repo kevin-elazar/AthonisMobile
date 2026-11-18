@@ -83,7 +83,7 @@ jobs:
       - name: Build do APK de produção no EAS (espera terminar)
         id: eas
         run: |
-          npx eas-cli@latest build --platform android --profile production --non-interactive --wait --json > build.json
+          npx eas-cli@27 build --platform android --profile production --non-interactive --wait --json > build.json
           url=$(node -e "const b=require('./build.json');console.log((Array.isArray(b)?b[0]:b).artifacts.buildUrl)")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           curl -fsSL "$url" -o "athonis-entregas-${GITHUB_REF_NAME}.apk"

@@ -47,12 +47,8 @@ export async function loadRoutes(): Promise<RoutesView> {
     const server = await fetchRoutes();
     // As ações ainda na fila são reaplicadas por cima do que veio do
     // servidor: ele ainda não sabe delas, e a tela não pode "desfazê-las".
-    const pending = await store.listOutbox('pending');
-    await store.replaceRoutes(
-      localDay(),
-      server.map((route) => mergePending(route, pending)),
-      new Date().toISOString(),
-    );
+    // Ler a fila e gravar acontecem de uma vez só, no próprio banco local.
+    await store.replaceServerRoutes(localDay(), server, new Date().toISOString(), mergePending);
   } catch (error) {
     if (!isNetworkError(error)) throw error;
     offline = true;

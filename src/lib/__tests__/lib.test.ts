@@ -144,8 +144,18 @@ describe('erros da API', () => {
     expect(classifyFailure(erroHttp(429)).kind).toBe('retry');
     expect(classifyFailure(erroHttp(503)).kind).toBe('retry');
     expect(classifyFailure(erroHttp(422)).kind).toBe('reject');
+    expect(classifyFailure(erroHttp(408)).kind).toBe('retry');
     expect(isNetworkError(erroHttp(null))).toBe(true);
     expect(httpStatus(new Error('x'))).toBeNull();
+  });
+
+  it('erro fora da rede e do HTTP é definitivo, para não travar a fila', () => {
+    // Ex.: a resposta 2xx não passou na validação do esquema.
+    const zod = loginSchema.safeParse({ email: '', password: '' });
+    expect(zod.success).toBe(false);
+    expect(classifyFailure(zod.error).kind).toBe('reject');
+    expect(classifyFailure(new Error('quebrou')).kind).toBe('reject');
+    expect(classifyFailure('?').kind).toBe('reject');
   });
 });
 

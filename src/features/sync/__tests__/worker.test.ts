@@ -349,6 +349,27 @@ describe('fila offline', () => {
     expect(local.stops[0].status).toBe('delivered');
   });
 
+  it('ação enfileirada enquanto o servidor responde não some da tela', async () => {
+    const t = setup();
+    await t.seed();
+    await t.perform(action(1, 'route_start', null, 0));
+
+    // A entrega entra na fila no meio do envio da saída, antes de a resposta
+    // do servidor ser gravada.
+    const { send } = t.deps;
+    t.deps.send = async (item) => {
+      const result = await send(item);
+      if (item.kind === 'route_start') await t.perform(action(1, 'stop_deliver', 11, 10));
+      return result;
+    };
+    t.fail('evt-2', NETWORK);
+
+    await runSync(t.deps);
+
+    const local = (await t.store.getRoute(1)) as DriverRoute;
+    expect(local.stops[0].status).toBe('delivered');
+  });
+
   describe('rastro de GPS', () => {
     it('sobe em lotes de 200, do ponto mais antigo para o mais novo', async () => {
       const t = setup([route(1, { status: 'active' })]);
@@ -405,6 +426,51 @@ describe('fila offline', () => {
       expect(await t.store.countPings()).toBe(0);
     });
 
+    it('no cancelamento, o rastro da rota sobe antes do cancelamento', async () => {
+      const t = setup([route(1, { status: 'active' })]);
+      await t.seed();
+      await t.store.addPings([ping(1, 0), ping(1, 1)]);
+      const cancelamento = await t.perform(action(1, 'route_cancel', null, 30));
+
+      const ordem: string[] = [];
+      const { send, sendPings } = t.deps;
+      t.deps.send = async (item) => {
+        ordem.push(item.kind);
+        return send(item);
+      };
+      t.deps.sendPings = async (routeId, pings) => {
+        ordem.push(`pings:${pings.length}`);
+        return sendPings(routeId, pings);
+      };
+
+      const outcome = await runSync(t.deps);
+
+      expect(ordem).toEqual(['pings:2', 'route_cancel']);
+      expect(t.received).toEqual([cancelamento.id]);
+      expect(outcome.pingsSent).toBe(2);
+      expect(await t.store.countPings()).toBe(0);
+    });
+
+    it('sem rede para o rastro, o cancelamento espera para não perdê-lo', async () => {
+      const t = setup([route(1, { status: 'active' })]);
+      await t.seed();
+      await t.store.addPings([ping(1, 0)]);
+      await t.perform(action(1, 'route_cancel', null, 30));
+      t.failPings(NETWORK);
+
+      const outcome = await runSync(t.deps);
+
+      expect(outcome.deferred).toBe(true);
+      expect(t.received).toEqual([]);
+      expect(await t.store.countPings()).toBe(1);
+      expect(await t.store.listOutbox('pending')).toHaveLength(1);
+
+      t.failPings(null);
+      await runSync(t.deps);
+      expect(t.receivedPings).toHaveLength(1);
+      expect(await t.store.listOutbox('pending')).toEqual([]);
+    });
+
     it('o mesmo ponto gravado duas vezes conta uma vez só', async () => {
       const t = setup();
       await t.store.addPings([ping(1, 0)]);
@@ -451,7 +517,10 @@ describe('applyAction', () => {
   });
 
   it('o cancelamento tira a rota de andamento e não mexe nas paradas já baixadas', () => {
-    const emAndamento = applyAction(route(1, { status: 'active' }), action(1, 'stop_deliver', 11, 5));
+    const emAndamento = applyAction(
+      route(1, { status: 'active' }),
+      action(1, 'stop_deliver', 11, 5),
+    );
 
     const result = applyAction(emAndamento, action(1, 'route_cancel', null, 9));
 

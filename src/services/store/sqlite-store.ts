@@ -7,7 +7,7 @@ import type {
   OutboxStatus,
   PingRow,
 } from '@/features/sync/model';
-import type { CachedRoutes, LocalStore, OutboxPatch } from './types';
+import type { CachedRoutes, LocalStore, MergePending, OutboxPatch } from './types';
 
 const DATABASE_NAME = 'athonis.db';
 
@@ -162,6 +162,58 @@ export class SqliteStore implements LocalStore {
     });
   }
 
+  /**
+   * Rotas do servidor com as ações pendentes reaplicadas. A fila é lida dentro
+   * da mesma transação que grava: como `enqueue` também passa pela fila de
+   * transações, nenhuma ação nova entra entre a leitura e a gravação.
+   */
+  async saveServerRoute(route: DriverRoute, merge: MergePending): Promise<void> {
+    await this.transaction(async (db) => {
+      const pending = await this.readPending(db);
+      const merged = merge(route, pending);
+      await db.runAsync(
+        'INSERT OR REPLACE INTO route (route_id, payload) VALUES (?, ?)',
+        merged.route_id,
+        JSON.stringify(merged),
+      );
+    });
+  }
+
+  async replaceServerRoutes(
+    day: string,
+    routes: DriverRoute[],
+    fetchedAt: string,
+    merge: MergePending,
+  ): Promise<void> {
+    await this.transaction(async (db) => {
+      const pending = await this.readPending(db);
+      await db.runAsync('DELETE FROM route');
+      for (const route of routes) {
+        const merged = merge(route, pending);
+        await db.runAsync(
+          'INSERT INTO route (route_id, payload) VALUES (?, ?)',
+          merged.route_id,
+          JSON.stringify(merged),
+        );
+      }
+      await db.runAsync(
+        'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?), (?, ?)',
+        'routes.day',
+        day,
+        'routes.fetchedAt',
+        fetchedAt,
+      );
+    });
+  }
+
+  private async readPending(db: SQLite.SQLiteDatabase): Promise<OutboxItem[]> {
+    const rows = await db.getAllAsync<OutboxRecord>(
+      'SELECT * FROM outbox WHERE status = ? ORDER BY seq',
+      'pending',
+    );
+    return rows.map(toOutboxItem);
+  }
+
   async getRoute(routeId: number): Promise<DriverRoute | null> {
     const db = await this.db();
     const row = await db.getFirstAsync<{ payload: string }>(
@@ -271,6 +323,15 @@ export class SqliteStore implements LocalStore {
     return db.getAllAsync<PingRow>(
       'SELECT * FROM ping WHERE route_id = ? ORDER BY recorded_at LIMIT ?',
       oldest.route_id,
+      limit,
+    );
+  }
+
+  async takePingsForRoute(routeId: number, limit: number): Promise<PingRow[]> {
+    const db = await this.db();
+    return db.getAllAsync<PingRow>(
+      'SELECT * FROM ping WHERE route_id = ? ORDER BY recorded_at LIMIT ?',
+      routeId,
       limit,
     );
   }

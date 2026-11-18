@@ -50,18 +50,21 @@ export function httpStatus(error: unknown): number | null {
 /**
  * Decide o destino de um envio da fila que falhou.
  *
- * 408 e 429 são tratados como temporários, junto com 5xx e falha de rede:
- * repetir depois pode dar certo. Os demais 4xx são a resposta definitiva do
- * servidor para aquela ação.
+ * Só é temporário o que repetir depois pode resolver: falha de rede (sem
+ * resposta do servidor), 408, 429 e 5xx. Os demais 4xx são a resposta
+ * definitiva do servidor para aquela ação. Um erro que não veio da rede nem
+ * do HTTP (ex.: a resposta 2xx não passou na validação do esquema) também é
+ * definitivo: repetir daria o mesmo erro e travaria a fila da rota para sempre.
  */
 export function classifyFailure(error: unknown): Failure {
   const message = errorMessage(error);
 
   if (error instanceof SessionExpiredError) return { kind: 'auth', message };
+  if (isNetworkError(error)) return { kind: 'retry', message };
 
   const status = httpStatus(error);
   if (status === 401) return { kind: 'auth', message };
-  if (status === null || status === 408 || status === 429 || status >= 500) {
+  if (status !== null && (status === 408 || status === 429 || status >= 500)) {
     return { kind: 'retry', message };
   }
   return { kind: 'reject', message };

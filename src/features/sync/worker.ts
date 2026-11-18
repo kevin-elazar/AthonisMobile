@@ -59,6 +59,8 @@ export interface SyncOutcome {
  *   servidor antes da saída que a precede.
  * - Recusa definitiva tira o item do caminho e libera os próximos.
  * - O rastro de GPS só sobe depois das ações da rota, e nunca na frente delas.
+ *   A exceção é o cancelamento: o rastro da rota sobe logo antes dele, porque
+ *   depois o servidor recusa pontos de rota cancelada e o trajeto se perderia.
  */
 export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
   const { store } = deps;
@@ -71,9 +73,29 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
   };
 
   /** Grava a versão do servidor sem apagar o que ainda está na fila desta rota. */
-  const saveFromServer = async (route: DriverRoute) => {
-    const pending = await store.listOutbox('pending');
-    await store.saveRoute(mergePending(route, pending));
+  const saveFromServer = (route: DriverRoute) => store.saveServerRoute(route, mergePending);
+
+  /**
+   * Envia todo o rastro pendente de uma rota. Devolve o tipo da falha que
+   * interrompeu o envio, ou null se não sobrou nada (enviado ou descartado).
+   */
+  const flushRoutePings = async (routeId: number): Promise<'retry' | 'auth' | null> => {
+    for (;;) {
+      const pings = await store.takePingsForRoute(routeId, PING_BATCH_SIZE);
+      if (pings.length === 0) return null;
+      const ids = pings.map((ping) => ping.id);
+
+      try {
+        await deps.sendPings(routeId, pings);
+        await store.deletePings(ids);
+        outcome.pingsSent += pings.length;
+      } catch (error) {
+        const failure = deps.classify(error);
+        if (failure.kind === 'auth' || failure.kind === 'retry') return failure.kind;
+        // Recusa definitiva: o rastro não tem destino (mesma regra do envio normal).
+        await store.deletePings(ids);
+      }
+    }
   };
 
   const waiting = new Set<number>();
@@ -85,6 +107,20 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
       waiting.add(item.route_id);
       outcome.deferred = true;
       continue;
+    }
+
+    if (item.kind === 'route_cancel') {
+      const trail = await flushRoutePings(item.route_id);
+      if (trail === 'auth') {
+        outcome.authLost = true;
+        return outcome;
+      }
+      if (trail === 'retry') {
+        // Sem rede para o rastro: o cancelamento espera, para não perdê-lo.
+        waiting.add(item.route_id);
+        outcome.deferred = true;
+        continue;
+      }
     }
 
     try {
@@ -129,9 +165,7 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
 
   // Rotas que ainda têm ação na fila não enviam rastro: o servidor recusaria
   // os pontos de uma rota cuja saída ele ainda não conhece.
-  const comAcaoPendente = new Set(
-    (await store.listOutbox('pending')).map((item) => item.route_id),
-  );
+  const comAcaoPendente = new Set((await store.listOutbox('pending')).map((item) => item.route_id));
 
   for (let batch = 0; batch < MAX_PING_BATCHES_PER_RUN; batch += 1) {
     const pings = await store.takePings(PING_BATCH_SIZE, [...comAcaoPendente]);

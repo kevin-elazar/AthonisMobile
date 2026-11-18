@@ -8,6 +8,9 @@ export interface CachedRoutes {
   fetchedAt: string | null;
 }
 
+/** Reaplica as ações pendentes sobre a rota vinda do servidor (`mergePending`). */
+export type MergePending = (route: DriverRoute, pending: OutboxItem[]) => DriverRoute;
+
 export type OutboxPatch = Partial<
   Pick<OutboxItem, 'status' | 'attempts' | 'next_attempt_at' | 'last_error'>
 >;
@@ -30,6 +33,19 @@ export interface LocalStore {
   getRoute(routeId: number): Promise<DriverRoute | null>;
   saveRoute(route: DriverRoute): Promise<void>;
   removeRoute(routeId: number): Promise<void>;
+  /**
+   * Grava a rota que veio do servidor com as ações ainda pendentes
+   * reaplicadas. Ler a fila e gravar a rota acontecem de uma vez só: uma ação
+   * enfileirada no meio não pode ficar de fora da cópia local.
+   */
+  saveServerRoute(route: DriverRoute, merge: MergePending): Promise<void>;
+  /** Como `replaceRoutes`, reaplicando as ações pendentes de uma vez só (ver `saveServerRoute`). */
+  replaceServerRoutes(
+    day: string,
+    routes: DriverRoute[],
+    fetchedAt: string,
+    merge: MergePending,
+  ): Promise<void>;
 
   // ---- fila de ações
   /**
@@ -50,6 +66,8 @@ export interface LocalStore {
    * não esteja em `excludeRouteIds`), em ordem de leitura.
    */
   takePings(limit: number, excludeRouteIds?: number[]): Promise<PingRow[]>;
+  /** Os pontos mais antigos de uma rota específica, em ordem de leitura. */
+  takePingsForRoute(routeId: number, limit: number): Promise<PingRow[]>;
   deletePings(ids: string[]): Promise<void>;
   countPings(): Promise<number>;
 
