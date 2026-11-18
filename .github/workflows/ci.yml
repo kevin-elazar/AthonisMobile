@@ -44,7 +44,10 @@ jobs:
     name: SonarCloud
     needs: qualidade
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    # Analisa o PR (comparado com a branch de destino) e a branch principal.
+    # O push na branch de trabalho fica de fora: o SonarCloud a compararia com
+    # a branch padrão do repositório e o resultado sobrescreveria o check do PR.
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') }}
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:

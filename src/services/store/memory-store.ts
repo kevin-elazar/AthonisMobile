@@ -55,7 +55,8 @@ export class MemoryStore implements LocalStore {
 
   async getRoutes(): Promise<CachedRoutes> {
     return {
-      routes: structuredClone(this.state.routes),
+      // Mesma ordem do SQLite (ORDER BY route_id).
+      routes: structuredClone(this.state.routes).sort((a, b) => a.route_id - b.route_id),
       day: this.state.day,
       fetchedAt: this.state.fetchedAt,
     };
