@@ -308,6 +308,16 @@ describe('login', () => {
     await waitFor(() => expect(login).toHaveBeenCalledTimes(2));
   });
 
+  it('o botão de olho mostra e esconde a senha', () => {
+    render(<LoginScreen />);
+    const senha = screen.getByTestId('login-password');
+    expect(senha.props.secureTextEntry).toBe(true);
+    fireEvent.press(screen.getByLabelText('Mostrar senha'));
+    expect(screen.getByTestId('login-password').props.secureTextEntry).toBe(false);
+    fireEvent.press(screen.getByLabelText('Ocultar senha'));
+    expect(screen.getByTestId('login-password').props.secureTextEntry).toBe(true);
+  });
+
   it('avisa quando a sessão expirou', () => {
     mockExpired = true;
     render(<LoginScreen />);
