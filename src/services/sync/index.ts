@@ -58,6 +58,8 @@ export function onRoutesChanged(listener: () => void): () => void {
 let running: Promise<void> | null = null;
 let rerun = false;
 let lastRunAt = 0;
+/** Desligado no logout: nenhuma rodada nova começa até `startSyncTriggers`. */
+let enabled = true;
 
 /**
  * Pede uma rodada de sincronização.
@@ -68,7 +70,7 @@ let lastRunAt = 0;
  * leitura e não deve abrir uma conexão a cada 15 segundos.
  */
 export function requestSync(options: { minIntervalMs?: number } = {}): Promise<void> {
-  if (!getSession()) return Promise.resolve();
+  if (!enabled || !getSession()) return Promise.resolve();
 
   if (running) {
     rerun = true;
@@ -102,7 +104,7 @@ export function requestSync(options: { minIntervalMs?: number } = {}): Promise<v
           update({ lastSyncAt: new Date().toISOString() });
         }
         if (outcome.authLost) break;
-      } while (rerun);
+      } while (rerun && enabled);
     } catch {
       // Falha inesperada na rodada (ex.: banco local): a próxima tenta de novo.
     } finally {
@@ -116,10 +118,24 @@ export function requestSync(options: { minIntervalMs?: number } = {}): Promise<v
 }
 
 /**
+ * Para a sincronização: impede rodadas novas e espera a que estiver em
+ * andamento terminar. Chamado no logout antes de apagar o banco local, para
+ * que uma rodada no meio do caminho não grave de volta o que acabou de ser
+ * apagado (nem envie com a sessão que está saindo).
+ */
+export async function stopSync(): Promise<void> {
+  enabled = false;
+  rerun = false;
+  await running?.catch(() => undefined);
+}
+
+/**
  * Liga os gatilhos de sincronização: rede de volta, aplicativo de volta ao
  * primeiro plano e um intervalo fixo. Devolve a função que desliga tudo.
  */
 export function startSyncTriggers(): () => void {
+  enabled = true;
+
   const unsubscribeNet = NetInfo.addEventListener((info) => {
     const online = info.isConnected !== false;
     const voltou = online && !state.online;

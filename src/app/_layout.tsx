@@ -1,7 +1,7 @@
 // Registra a tarefa de GPS em segundo plano. Precisa acontecer na carga do
 // aplicativo, antes de qualquer tela: é só isto que roda quando o sistema
 // acorda o app para entregar uma leitura.
-import '@/services/location/tracking';
+import { stopTracking } from '@/services/location/tracking';
 // Sentry antes das telas, para capturar erros desde a abertura.
 import { withSentry } from '@/services/observability/sentry';
 
@@ -28,11 +28,17 @@ const queryClient = new QueryClient({
 
 function RootLayout() {
   const theme = useTheme();
-  const { hydrated, session } = useSession();
+  const { hydrated, session, expired } = useSession();
 
   useEffect(() => {
     void hydrateSession();
   }, []);
+
+  // Sessão recusada pelo servidor: ninguém está logado, então o GPS para. A
+  // fila e o rastro ficam guardados para quando o mesmo motorista entrar de novo.
+  useEffect(() => {
+    if (!session && expired) void stopTracking();
+  }, [session, expired]);
 
   if (!hydrated) {
     return (

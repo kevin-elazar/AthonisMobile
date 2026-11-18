@@ -9,8 +9,10 @@ import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { loginSchema, type LoginForm } from '@/features/auth/model';
+import { confirm } from '@/lib/confirm';
 import { login } from '@/services/api/client';
 import { errorMessage, httpStatus } from '@/services/api/errors';
+import { discardMessage, prepareLocalDataFor } from '@/services/local-owner';
 import { useSession } from '@/services/session';
 import { spacing } from '@/theme/tokens';
 
@@ -36,11 +38,21 @@ export default function LoginScreen() {
     setFailure(null);
     try {
       // Com a sessão gravada, o guarda de rotas troca sozinho para as telas do app.
-      await login(email, password, deviceName());
+      // Antes disso, se o aparelho guarda dados de outro motorista, eles são
+      // apagados (com aviso, se ainda não foram enviados).
+      await login(email, password, deviceName(), {
+        beforeSave: (session) =>
+          prepareLocalDataFor(session.user.id, (unsent) =>
+            confirm({
+              title: 'Dados de outro motorista',
+              message: discardMessage(unsent),
+              confirmLabel: 'Entrar e apagar',
+              destructive: true,
+            }),
+          ),
+      });
     } catch (error) {
-      setFailure(
-        httpStatus(error) === 401 ? 'E-mail ou senha incorretos.' : errorMessage(error),
-      );
+      setFailure(httpStatus(error) === 401 ? 'E-mail ou senha incorretos.' : errorMessage(error));
     }
   });
 
@@ -102,7 +114,13 @@ export default function LoginScreen() {
           )}
         />
 
-        <Button label="Entrar" onPress={submit} loading={isSubmitting} large testID="login-submit" />
+        <Button
+          label="Entrar"
+          onPress={submit}
+          loading={isSubmitting}
+          large
+          testID="login-submit"
+        />
       </Screen>
     </KeyboardAvoidingView>
   );

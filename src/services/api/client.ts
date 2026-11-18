@@ -29,9 +29,31 @@ export function toSession(response: AuthResponse): Session {
   };
 }
 
-export async function login(email: string, password: string, device: string): Promise<Session> {
+export interface LoginOptions {
+  /**
+   * Roda com a sessão já aceita pelo servidor, antes de ela ser gravada (é a
+   * gravação que leva às telas do app). Se lançar erro, o login é desfeito:
+   * o refresh token recém-emitido é revogado e o erro sobe para a tela.
+   */
+  beforeSave?: (session: Session) => Promise<void>;
+}
+
+export async function login(
+  email: string,
+  password: string,
+  device: string,
+  options: LoginOptions = {},
+): Promise<Session> {
   const { data } = await authApi.post('/auth/login', { email, password, device });
   const session = toSession(authResponseSchema.parse(data));
+  if (options.beforeSave) {
+    try {
+      await options.beforeSave(session);
+    } catch (error) {
+      await logoutRemote(session.refreshToken);
+      throw error;
+    }
+  }
   await saveSession(session);
   return session;
 }

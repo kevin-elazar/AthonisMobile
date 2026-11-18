@@ -23,7 +23,7 @@ import { fetchProfile } from '@/services/api/driver';
 import { stopTracking, trackingMode, type TrackingMode } from '@/services/location/tracking';
 import { clearSession, useSession } from '@/services/session';
 import { store } from '@/services/store';
-import { refreshSyncCounts, useSyncState } from '@/services/sync';
+import { refreshSyncCounts, stopSync, useSyncState } from '@/services/sync';
 
 const TRACKING_LABELS: Record<TrackingMode, string> = {
   background: 'Ligado, inclusive com a tela apagada',
@@ -78,6 +78,8 @@ export default function ProfileScreen() {
 
     setLeaving(true);
     await stopTracking();
+    // Espera a rodada em andamento: ela não pode regravar o banco depois do clear.
+    await stopSync();
     await logoutRemote(session.refreshToken);
     await store.clear();
     await refreshSyncCounts();

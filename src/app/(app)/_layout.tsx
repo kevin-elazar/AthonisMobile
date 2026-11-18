@@ -2,15 +2,23 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { SyncBadge } from '@/components/domain/sync-badge';
 import { useRoutes, useRoutesSyncBridge } from '@/features/routes/hooks';
+import { adoptLocalOwner } from '@/services/local-owner';
 import { reconcileTracking } from '@/services/location/tracking';
+import { useSession } from '@/services/session';
 import { startSyncTriggers } from '@/services/sync';
 import { useTheme } from '@/theme/use-theme';
 
 export default function AppLayout() {
   const theme = useTheme();
   const { data } = useRoutes();
+  const userId = useSession().session?.user.id;
 
   useRoutesSyncBridge();
+
+  // Sessão aberta antes de existir o registro do dono dos dados locais.
+  useEffect(() => {
+    if (userId != null) void adoptLocalOwner(userId);
+  }, [userId]);
 
   // A fila só é enviada com alguém logado: os gatilhos nascem e morrem com estas telas.
   useEffect(() => startSyncTriggers(), []);
