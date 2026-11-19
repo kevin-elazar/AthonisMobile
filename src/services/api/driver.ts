@@ -1,9 +1,5 @@
 import { driverProfileSchema, type DriverProfile } from '@/features/auth/model';
-import {
-  driverRouteSchema,
-  driverRoutesSchema,
-  type DriverRoute,
-} from '@/features/routes/model';
+import { driverRouteSchema, driverRoutesSchema, type DriverRoute } from '@/features/routes/model';
 import type { OutboxItem, PingRow } from '@/features/sync/model';
 import { api } from './client';
 import { httpStatus } from './errors';

@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, StyleSheet, View, type TextInput } from 'react-native';
+import { Image, Platform, StyleSheet, View, type TextInput } from 'react-native';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Notice } from '@/components/ui/notice';
 import { Screen } from '@/components/ui/screen';
@@ -14,7 +16,10 @@ import { login } from '@/services/api/client';
 import { errorMessage, httpStatus } from '@/services/api/errors';
 import { discardMessage, prepareLocalDataFor } from '@/services/local-owner';
 import { useSession } from '@/services/session';
-import { spacing } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/use-theme';
+
+const LOGO = require('../../../assets/images/logo-mark.png');
 
 function deviceName(): string {
   return [Device.manufacturer, Device.modelName].filter(Boolean).join(' ') || Platform.OS;
@@ -22,6 +27,7 @@ function deviceName(): string {
 
 export default function LoginScreen() {
   const { expired } = useSession();
+  const theme = useTheme();
   const passwordRef = useRef<TextInput>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -57,15 +63,18 @@ export default function LoginScreen() {
   });
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Screen contentStyle={styles.content}>
-        <View style={styles.header}>
-          <Text variant="heading2">Athonis Entregas</Text>
-          <Text tone="muted">Entre com o acesso criado pelo escritório.</Text>
-        </View>
+    <Screen contentStyle={styles.content}>
+      <View style={[styles.hero, { backgroundColor: theme.primary }]}>
+        <Image source={LOGO} style={styles.logo} accessibilityIgnoresInvertColors />
+        <Text variant="heading2" style={styles.heroTitle}>
+          Athonis Entregas
+        </Text>
+        <Text style={styles.heroSubtitle}>Suas rotas do dia, mesmo sem sinal.</Text>
+      </View>
+
+      <Card style={styles.form}>
+        <Text variant="heading4">Entrar</Text>
+        <Text tone="muted">Use o acesso criado pelo escritório.</Text>
 
         {expired && !failure ? (
           <Notice tone="warning">Sua sessão expirou. Entre novamente para continuar.</Notice>
@@ -121,22 +130,53 @@ export default function LoginScreen() {
           large
           testID="login-submit"
         />
-      </Screen>
-    </KeyboardAvoidingView>
+      </Card>
+
+      <Text variant="caption" tone="muted" align="center" style={styles.footer}>
+        versão {Constants.expoConfig?.version ?? '—'} · TCC de Engenharia de Software · Católica SC
+      </Text>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   content: {
     flexGrow: 1,
-    justifyContent: 'center',
+    padding: 0,
     gap: spacing.lg,
   },
-  header: {
-    gap: spacing.xs,
-    marginBottom: spacing.md,
+  hero: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.xxl * 2,
+    paddingBottom: spacing.xxl * 1.5,
+    paddingHorizontal: spacing.lg,
+    borderBottomLeftRadius: radius.xl * 2,
+    borderBottomRightRadius: radius.xl * 2,
+  },
+  logo: {
+    width: 88,
+    height: 88,
+    marginBottom: spacing.sm,
+    // Borda clara: no tema claro o logo azul se confundiria com o cabeçalho.
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.55)',
+  },
+  heroTitle: {
+    color: '#ffffff',
+  },
+  heroSubtitle: {
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  form: {
+    marginHorizontal: spacing.lg,
+    marginTop: -spacing.xxl,
+    gap: spacing.md,
+  },
+  footer: {
+    marginTop: 'auto',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
 });

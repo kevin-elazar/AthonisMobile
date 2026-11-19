@@ -57,6 +57,8 @@ export function onRoutesChanged(listener: () => void): () => void {
 
 let running: Promise<void> | null = null;
 let rerun = false;
+/** A próxima rodada ignora a espera entre tentativas (rede voltou, pedido manual). */
+let forceNext = false;
 let lastRunAt = 0;
 /** Desligado no logout: nenhuma rodada nova começa até `startSyncTriggers`. */
 let enabled = true;
@@ -69,11 +71,14 @@ let enabled = true;
  * ao mesmo tempo. `minIntervalMs` serve à tarefa de GPS, que dispara a cada
  * leitura e não deve abrir uma conexão a cada 15 segundos.
  */
-export function requestSync(options: { minIntervalMs?: number } = {}): Promise<void> {
+export function requestSync(
+  options: { minIntervalMs?: number; ignoreBackoff?: boolean } = {},
+): Promise<void> {
   if (!enabled || !getSession()) return Promise.resolve();
 
   if (running) {
     rerun = true;
+    if (options.ignoreBackoff) forceNext = true;
     return running;
   }
 
@@ -81,12 +86,16 @@ export function requestSync(options: { minIntervalMs?: number } = {}): Promise<v
     return Promise.resolve();
   }
 
+  let forcar = !!options.ignoreBackoff;
   running = (async () => {
     update({ syncing: true });
     try {
       do {
         rerun = false;
         lastRunAt = Date.now();
+        const ignoreBackoff = forcar || forceNext;
+        forcar = false;
+        forceNext = false;
 
         const outcome = await runSync({
           store,
@@ -95,6 +104,7 @@ export function requestSync(options: { minIntervalMs?: number } = {}): Promise<v
           fetchRoute,
           classify: classifyFailure,
           now: Date.now,
+          ignoreBackoff,
         });
 
         if (outcome.sent > 0 || outcome.rejected > 0) {
@@ -140,11 +150,11 @@ export function startSyncTriggers(): () => void {
     const online = info.isConnected !== false;
     const voltou = online && !state.online;
     update({ online });
-    if (voltou) void requestSync();
+    if (voltou) void requestSync({ ignoreBackoff: true });
   });
 
   const appState = AppState.addEventListener('change', (status) => {
-    if (status === 'active') void requestSync();
+    if (status === 'active') void requestSync({ ignoreBackoff: true });
   });
 
   const interval = setInterval(() => void requestSync(), INTERVAL_MS);

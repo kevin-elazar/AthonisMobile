@@ -70,7 +70,7 @@ export default function SyncScreen() {
         <Button
           label={state.syncing ? 'Sincronizando…' : 'Sincronizar agora'}
           icon="sync"
-          onPress={() => void requestSync()}
+          onPress={() => void requestSync({ ignoreBackoff: true })}
           loading={state.syncing}
           disabled={!state.online}
           large

@@ -189,7 +189,9 @@ export default function StopScreen() {
       {failure ? <Notice tone="danger">{failure}</Notice> : null}
 
       {route.status === 'planned' ? (
-        <Notice tone="info">Inicie a rota para registrar a chegada e a entrega desta parada.</Notice>
+        <Notice tone="info">
+          Inicie a rota para registrar a chegada e a entrega desta parada.
+        </Notice>
       ) : null}
 
       {canAct ? (

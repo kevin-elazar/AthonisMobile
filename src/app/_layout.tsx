@@ -7,13 +7,18 @@ import { withSentry } from '@/services/observability/sentry';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { LoadingState } from '@/components/ui/states';
 import { hydrateSession, useSession } from '@/services/session';
 import { useTheme } from '@/theme/use-theme';
+
+// O splash da marca (app.json) fica na tela até a sessão ser lida: o motorista
+// não vê a tela piscar entre "abrindo", login e rotas.
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +39,10 @@ function RootLayout() {
     void hydrateSession();
   }, []);
 
+  useEffect(() => {
+    if (hydrated) void SplashScreen.hideAsync().catch(() => undefined);
+  }, [hydrated]);
+
   // Sessão recusada pelo servidor: ninguém está logado, então o GPS para. A
   // fila e o rastro ficam guardados para quando o mesmo motorista entrar de novo.
   useEffect(() => {
@@ -42,25 +51,26 @@ function RootLayout() {
 
   if (!hydrated) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.background }}>
-        <LoadingState label="Abrindo…" />
-      </View>
+      // Coberto pelo splash; se ele já tiver saído, a mesma cor evita um clarão.
+      <View style={{ flex: 1, backgroundColor: theme.primary }} />
     );
   }
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={!!session}>
-            <Stack.Screen name="(app)" />
-          </Stack.Protected>
-          <Stack.Protected guard={!session}>
-            <Stack.Screen name="(auth)" />
-          </Stack.Protected>
-        </Stack>
-      </QueryClientProvider>
+      <KeyboardProvider>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Protected guard={!!session}>
+              <Stack.Screen name="(app)" />
+            </Stack.Protected>
+            <Stack.Protected guard={!session}>
+              <Stack.Screen name="(auth)" />
+            </Stack.Protected>
+          </Stack>
+        </QueryClientProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

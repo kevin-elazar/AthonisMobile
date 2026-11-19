@@ -39,6 +39,13 @@ export interface SyncDeps {
   fetchRoute(routeId: number): Promise<DriverRoute | null>;
   classify(error: unknown): Failure;
   now(): number;
+  /**
+   * Tenta já, sem esperar o intervalo entre tentativas. Usado quando a rede
+   * volta ou o entregador pede "Sincronizar agora": a espera crescente (até
+   * 15 min) existe para não insistir sem sinal, não para atrasar o envio
+   * quando o sinal acabou de voltar.
+   */
+  ignoreBackoff?: boolean;
 }
 
 export interface SyncOutcome {
@@ -103,7 +110,7 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
   for (const item of await store.listOutbox('pending')) {
     if (waiting.has(item.route_id)) continue;
 
-    if (item.next_attempt_at > deps.now()) {
+    if (!deps.ignoreBackoff && item.next_attempt_at > deps.now()) {
       waiting.add(item.route_id);
       outcome.deferred = true;
       continue;

@@ -1,12 +1,6 @@
-import type { ReactNode } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { RefreshControl, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -33,11 +27,16 @@ export function Screen({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const bottom = Math.max(insets.bottom, spacing.lg);
+  const [footerHeight, setFooterHeight] = useState(0);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       {scroll ? (
-        <ScrollView
+        // Com o teclado aberto, a tela rola até o campo em foco e o deixa acima
+        // do rodapé, que sobe junto com o teclado. O ajuste nativo do Android
+        // não funciona com o app desenhado até as bordas (edge-to-edge).
+        <KeyboardAwareScrollView
+          bottomOffset={footerHeight + spacing.lg}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: footer ? spacing.lg : bottom },
@@ -56,24 +55,27 @@ export function Screen({
           }
         >
           {children}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         <View style={[styles.content, styles.fill, contentStyle]}>{children}</View>
       )}
 
       {footer ? (
-        <View
-          style={[
-            styles.footer,
-            {
-              paddingBottom: bottom,
-              backgroundColor: theme.surface,
-              borderTopColor: theme.border,
-            },
-          ]}
-        >
-          {footer}
-        </View>
+        <KeyboardStickyView offset={{ opened: bottom - spacing.sm }}>
+          <View
+            onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+            style={[
+              styles.footer,
+              {
+                paddingBottom: bottom,
+                backgroundColor: theme.surface,
+                borderTopColor: theme.border,
+              },
+            ]}
+          >
+            {footer}
+          </View>
+        </KeyboardStickyView>
       ) : null}
     </View>
   );

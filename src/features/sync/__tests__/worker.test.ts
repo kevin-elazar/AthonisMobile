@@ -558,3 +558,30 @@ describe('applyAction', () => {
     expect(result.stops.map((item) => item.status)).toEqual(['delivered', 'in_route']);
   });
 });
+
+describe('rede de volta', () => {
+  it('ignoreBackoff envia já o que estava esperando a próxima tentativa', async () => {
+    const store = new MemoryStore();
+    await store.enqueue(action(1, 'route_start'), route(1, { status: 'active' }));
+    const [item] = await store.listOutbox();
+    await store.updateOutbox(item.id, { attempts: 4, next_attempt_at: Date.now() + 900_000 });
+
+    const send = jest.fn(async () => route(1, { status: 'active' }));
+    const deps = {
+      store,
+      send,
+      sendPings: jest.fn(async () => undefined),
+      fetchRoute: jest.fn(async () => null),
+      classify: () => ({ kind: 'retry' as const, message: 'rede' }),
+      now: Date.now,
+    };
+
+    const esperando = await runSync(deps);
+    expect(esperando.deferred).toBe(true);
+    expect(send).not.toHaveBeenCalled();
+
+    const agora = await runSync({ ...deps, ignoreBackoff: true });
+    expect(agora.sent).toBe(1);
+    expect(await store.listOutbox()).toHaveLength(0);
+  });
+});

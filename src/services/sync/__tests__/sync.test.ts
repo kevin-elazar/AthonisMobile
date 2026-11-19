@@ -209,3 +209,28 @@ describe('gatilhos', () => {
     }
   });
 });
+
+describe('envio forçado', () => {
+  it('rede de volta e pedido manual ignoram a espera entre tentativas; o relógio não', async () => {
+    jest.useFakeTimers();
+    try {
+      const desligar = startSyncTriggers();
+      await jest.advanceTimersByTimeAsync(0);
+      expect(run).toHaveBeenLastCalledWith(expect.objectContaining({ ignoreBackoff: false }));
+
+      netListener?.({ isConnected: false });
+      netListener?.({ isConnected: true });
+      await jest.advanceTimersByTimeAsync(0);
+      expect(run).toHaveBeenLastCalledWith(expect.objectContaining({ ignoreBackoff: true }));
+
+      await jest.advanceTimersByTimeAsync(30_000);
+      expect(run).toHaveBeenLastCalledWith(expect.objectContaining({ ignoreBackoff: false }));
+
+      await requestSync({ ignoreBackoff: true });
+      expect(run).toHaveBeenLastCalledWith(expect.objectContaining({ ignoreBackoff: true }));
+      desligar();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});

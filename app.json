@@ -2,7 +2,7 @@
   "expo": {
     "name": "Athonis Entregas",
     "slug": "athonis-mobile",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "athonis",
@@ -46,7 +46,8 @@
         {
           "backgroundColor": "#2F5DE3",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 140,
+          "resizeMode": "contain"
         }
       ],
       "expo-secure-store",
