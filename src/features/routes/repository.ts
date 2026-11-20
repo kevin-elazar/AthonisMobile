@@ -1,6 +1,6 @@
 import { mergePending } from '@/features/sync/apply';
 import { localDay } from '@/lib/format';
-import { fetchRoutes } from '@/services/api/driver';
+import { fetchRoute, fetchRoutes, fetchRoutesInRange } from '@/services/api/driver';
 import { isNetworkError } from '@/services/api/errors';
 import { store } from '@/services/store';
 import type { DriverRoute } from './model';
@@ -57,6 +57,35 @@ export async function loadRoutes(): Promise<RoutesView> {
   return { ...(await readLocal()), offline };
 }
 
-export async function loadRoute(routeId: number): Promise<DriverRoute | null> {
-  return store.getRoute(routeId);
+/**
+ * Rota aberta só para consulta: veio do servidor e não está no aparelho
+ * (outro dia, vista em "Minhas rotas"). Sem cópia local não há fila offline,
+ * então a tela não oferece as ações.
+ */
+export type LoadedRoute = DriverRoute & { preview?: boolean };
+
+/**
+ * A rota do aparelho; se não estiver nele (rota de outro dia), busca no
+ * servidor para consulta.
+ */
+export async function loadRoute(routeId: number): Promise<LoadedRoute | null> {
+  const local = await store.getRoute(routeId);
+  if (local) return local;
+
+  try {
+    const remote = await fetchRoute(routeId);
+    return remote ? { ...remote, preview: true } : null;
+  } catch (error) {
+    if (isNetworkError(error)) return null;
+    throw error;
+  }
+}
+
+/** Período da lista "Minhas rotas": 14 dias para trás e 14 para a frente. */
+export const MY_ROUTES_PAST_DAYS = 14;
+export const MY_ROUTES_NEXT_DAYS = 14;
+
+/** Rotas do período, direto do servidor (a lista precisa de rede). */
+export async function loadRoutesInRange(from: string, to: string): Promise<DriverRoute[]> {
+  return fetchRoutesInRange(from, to);
 }

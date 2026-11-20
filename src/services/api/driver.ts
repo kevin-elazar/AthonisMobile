@@ -17,6 +17,12 @@ export async function fetchRoutes(): Promise<DriverRoute[]> {
   return driverRoutesSchema.parse(data);
 }
 
+/** Rotas de um período (AAAA-MM-DD), para a lista "Minhas rotas". Sem as canceladas. */
+export async function fetchRoutesInRange(from: string, to: string): Promise<DriverRoute[]> {
+  const { data } = await api.get('/driver/routes/range', { params: { from, to } });
+  return driverRoutesSchema.parse(data);
+}
+
 /** Devolve null quando a rota não existe mais para este motorista. */
 export async function fetchRoute(routeId: number): Promise<DriverRoute | null> {
   try {

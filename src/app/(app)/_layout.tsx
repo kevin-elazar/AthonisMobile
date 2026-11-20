@@ -45,6 +45,7 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Rotas de hoje' }} />
+      <Stack.Screen name="my-routes" options={{ title: 'Minhas rotas' }} />
       <Stack.Screen name="route/[id]" options={{ title: 'Rota' }} />
       <Stack.Screen name="stop/[orderId]" options={{ title: 'Parada' }} />
       <Stack.Screen name="occurrence" options={{ title: 'Não entregue' }} />

@@ -10,17 +10,18 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { useRoutes } from '@/features/routes/hooks';
 import { nextStop, routeProgress, type DriverRoute } from '@/features/routes/model';
-import { formatDateTime, formatDistance, formatDuration, plural } from '@/lib/format';
+import { daySummary } from '@/features/routes/summary';
+import { formatDateTime, formatDistance, formatDuration, formatTime, plural } from '@/lib/format';
+import { formatAddress, openNavigation, openPhone } from '@/lib/maps';
 import { errorMessage } from '@/services/api/errors';
 import { useSession } from '@/services/session';
-import { spacing } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 function RouteCard({ route }: { route: DriverRoute }) {
   const router = useRouter();
   const theme = useTheme();
   const progress = routeProgress(route);
-  const proxima = nextStop(route);
 
   return (
     <Card
@@ -55,10 +56,10 @@ function RouteCard({ route }: { route: DriverRoute }) {
         </View>
       </View>
 
-      {route.status === 'active' && proxima ? (
-        <Text variant="bodySm" tone="primary" weight="medium" numberOfLines={1}>
-          Próxima: {proxima.client_name ?? proxima.title}
-        </Text>
+      {route.status !== 'planned' ? (
+        <ProgressBar
+          value={progress.total ? (progress.delivered + progress.failed) / progress.total : 0}
+        />
       ) : null}
       {progress.failed > 0 ? (
         <Text variant="bodySm" tone="danger">
@@ -69,10 +70,157 @@ function RouteCard({ route }: { route: DriverRoute }) {
   );
 }
 
+function ProgressBar({ value }: { value: number }) {
+  const theme = useTheme();
+  const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
+  return (
+    <View
+      style={[styles.track, { backgroundColor: theme.surfaceMuted }]}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+    >
+      <View style={[styles.fill, { width: `${pct}%`, backgroundColor: theme.success }]} />
+    </View>
+  );
+}
+
+const SUMMARY_TRACK = 'rgba(255,255,255,0.3)';
+const SUMMARY_FILL = '#ffffff';
+
+/** Painel do dia: quanto falta, distância e hora prevista para terminar. */
+function TodaySummary({ routes }: { routes: DriverRoute[] }) {
+  const theme = useTheme();
+  const resumo = daySummary(routes);
+
+  return (
+    <Card
+      style={{ backgroundColor: theme.primary, borderColor: theme.primary }}
+      testID="today-summary"
+    >
+      <Text variant="label" tone="inverse" weight="semibold">
+        RESUMO DE HOJE
+      </Text>
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryItem}>
+          <Text variant="heading2" tone="inverse">
+            {resumo.open}
+          </Text>
+          <Text variant="caption" tone="inverse">
+            {resumo.open === 1 ? 'parada a fazer' : 'paradas a fazer'}
+          </Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text variant="heading2" tone="inverse">
+            {resumo.delivered}
+          </Text>
+          <Text variant="caption" tone="inverse">
+            {resumo.delivered === 1 ? 'entregue' : 'entregues'}
+          </Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text variant="heading2" tone="inverse">
+            {resumo.failed}
+          </Text>
+          <Text variant="caption" tone="inverse">
+            {resumo.failed === 1 ? 'não entregue' : 'não entregues'}
+          </Text>
+        </View>
+      </View>
+      {/* Branco nos dois temas: o fundo do cartão é sempre o azul da marca. */}
+      <View style={[styles.track, { backgroundColor: SUMMARY_TRACK }]}>
+        <View
+          style={[
+            styles.fill,
+            { width: `${Math.round(resumo.done * 100)}%`, backgroundColor: SUMMARY_FILL },
+          ]}
+        />
+      </View>
+      <Text variant="bodySm" tone="inverse">
+        {[
+          formatDistance(resumo.distanceM),
+          formatDuration(resumo.durationMin),
+          resumo.expectedEnd ? `término previsto às ${formatTime(resumo.expectedEnd)}` : null,
+        ]
+          .filter((item) => item && item !== '—')
+          .join(' · ')}
+      </Text>
+    </Card>
+  );
+}
+
+/** A próxima parada da rota em andamento, com os atalhos que o motorista mais usa. */
+function NextStopCard({ route }: { route: DriverRoute }) {
+  const router = useRouter();
+  const theme = useTheme();
+  const stop = nextStop(route);
+  if (!stop) return null;
+
+  const detalhes = [
+    stop.delivery_window ? `Janela ${stop.delivery_window}` : null,
+    stop.planned_arrival ? `previsto ${formatTime(stop.planned_arrival)}` : null,
+    stop.invoice_number ? `NF ${stop.invoice_number}` : null,
+    `${stop.quantity} ${stop.quantity === 1 ? 'volume' : 'volumes'}`,
+  ].filter(Boolean);
+
+  return (
+    // Sem onPress no cartão: os botões ficam dentro dele, e botão dentro de
+    // botão confunde o toque e o leitor de tela.
+    <Card style={{ borderColor: theme.primary, borderWidth: 2 }} testID="next-stop-card">
+      <Text variant="label" tone="primary" weight="semibold">
+        {`PRÓXIMA PARADA · ${stop.stop_sequence ?? '—'} DE ${route.stops.length}`}
+      </Text>
+      <Text variant="heading4" numberOfLines={1}>
+        {stop.client_name ?? stop.title}
+      </Text>
+      <Text tone="muted" numberOfLines={2}>
+        {formatAddress(stop)}
+        {stop.address.complement ? ` · ${stop.address.complement}` : ''}
+      </Text>
+      <Text variant="bodySm">{detalhes.join(' · ')}</Text>
+      <View style={styles.quickActions}>
+        <View style={styles.flex}>
+          <Button
+            label="Abrir"
+            icon="arrow-forward"
+            onPress={() =>
+              router.push({
+                pathname: '/stop/[orderId]',
+                params: { orderId: stop.order_id, routeId: route.route_id },
+              })
+            }
+            testID="next-stop-open"
+          />
+        </View>
+        <View style={styles.flex}>
+          <Button
+            label="Navegar"
+            icon="navigate"
+            variant="secondary"
+            onPress={() => void openNavigation(stop)}
+            testID="next-stop-navigate"
+          />
+        </View>
+        {stop.client_phone ? (
+          <View style={styles.flex}>
+            <Button
+              label="Ligar"
+              icon="call"
+              variant="secondary"
+              onPress={() => void openPhone(stop.client_phone as string)}
+              testID="next-stop-call"
+            />
+          </View>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
+
 export default function RoutesScreen() {
   const router = useRouter();
   const { session } = useSession();
   const { data, error, isPending, isRefetching, refetch } = useRoutes();
+  const activeRoute = data?.routes.find((route) => route.status === 'active');
 
   return (
     <Screen refreshing={isRefetching} onRefresh={() => void refetch()}>
@@ -102,6 +250,9 @@ export default function RoutesScreen() {
         </Notice>
       ) : null}
 
+      {data && data.routes.length > 0 ? <TodaySummary routes={data.routes} /> : null}
+      {activeRoute ? <NextStopCard route={activeRoute} /> : null}
+
       {isPending ? (
         <LoadingState label="Buscando suas rotas…" />
       ) : error ? (
@@ -126,6 +277,14 @@ export default function RoutesScreen() {
       ) : (
         data.routes.map((route) => <RouteCard key={route.route_id} route={route} />)
       )}
+
+      <Button
+        label="Minhas rotas: próximas e anteriores"
+        icon="calendar-outline"
+        variant="secondary"
+        onPress={() => router.push('/my-routes')}
+        testID="open-my-routes"
+      />
     </Screen>
   );
 }
@@ -156,5 +315,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  track: {
+    height: 6,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: radius.full,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  summaryItem: {
+    flex: 1,
+    gap: 2,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  flex: {
+    flex: 1,
   },
 });

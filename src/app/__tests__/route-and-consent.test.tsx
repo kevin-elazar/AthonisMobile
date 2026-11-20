@@ -35,6 +35,10 @@ jest.mock('@/services/sync', () => ({
   onRoutesChanged: () => () => undefined,
 }));
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(async () => undefined) }));
+const mockFetchRoute = jest.fn(async (_id: number): Promise<unknown> => null);
+jest.mock('@/services/api/driver', () => ({
+  fetchRoute: (id: number) => mockFetchRoute(id),
+}));
 
 const mockRouter = {
   push: jest.fn(),
@@ -151,6 +155,13 @@ describe('tela da rota', () => {
     renderWithQuery(<RouteScreen />);
     fireEvent.press(await screen.findByText('Voltar para as rotas'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/');
+  });
+
+  it('rota de outro dia (vinda do servidor) abre só para consulta', async () => {
+    mockFetchRoute.mockResolvedValueOnce(rota({ planned_date: '2099-11-25' }));
+    renderWithQuery(<RouteScreen />);
+    expect(await screen.findByText(/Rota planejada para 25\/11\/2099/)).toBeTruthy();
+    expect(screen.queryByTestId('route-start')).toBeNull();
   });
 
   it('primeira saída abre o consentimento antes de iniciar', async () => {

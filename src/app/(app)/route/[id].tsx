@@ -184,9 +184,10 @@ export default function RouteScreen() {
 
   const progress = routeProgress(route);
   const proxima = route.status === 'active' ? nextStop(route) : null;
+  // Rota de outro dia, aberta em "Minhas rotas": só consulta.
+  const preview = 'preview' in route && route.preview === true;
 
-  const footer =
-    route.status === 'planned' ? (
+  const footer = preview ? undefined : route.status === 'planned' ? (
       <Button
         label="Iniciar rota"
         icon="play"
@@ -245,6 +246,11 @@ export default function RouteScreen() {
         </Text>
       </Card>
 
+      {preview && route.status === 'planned' ? (
+        <Notice tone="info">
+          {`Rota planejada para ${formatDay(route.planned_date)}. No dia, ela aparece na tela inicial para você iniciar.`}
+        </Notice>
+      ) : null}
       {route.simulated ? (
         <Notice tone="info">
           Rota estimada, sem a otimização do Google: distância e horários são aproximados.
@@ -263,7 +269,7 @@ export default function RouteScreen() {
       ))}
 
       {/* No fim da lista, longe do polegar: cancelar é exceção, não o próximo passo. */}
-      {route.status === 'active' ? (
+      {route.status === 'active' && !preview ? (
         <Button
           label="Cancelar rota"
           icon="close-circle-outline"

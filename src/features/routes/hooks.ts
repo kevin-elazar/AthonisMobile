@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { onRoutesChanged } from '@/services/sync';
 import { performRouteAction, type RouteActionInput } from './actions';
-import { loadRoute, loadRoutes } from './repository';
+import { localDay } from '@/lib/format';
+import {
+  loadRoute,
+  loadRoutes,
+  loadRoutesInRange,
+  MY_ROUTES_NEXT_DAYS,
+  MY_ROUTES_PAST_DAYS,
+} from './repository';
+import { addDays } from './summary';
 
 /**
  * Controllers das telas de rota.
@@ -14,6 +22,7 @@ import { loadRoute, loadRoutes } from './repository';
 export const routeKeys = {
   all: ['routes'] as const,
   detail: (routeId: number) => ['routes', routeId] as const,
+  range: (from: string, to: string) => ['routes', 'range', from, to] as const,
 };
 
 export function useRoutes() {
@@ -32,6 +41,20 @@ export function useRoute(routeId: number) {
     networkMode: 'always',
     retry: false,
     enabled: Number.isFinite(routeId),
+  });
+}
+
+/**
+ * Rotas de 14 dias para trás a 14 para a frente, para a lista "Minhas
+ * rotas". Precisa de rede: sem ela, a consulta falha e a tela avisa.
+ */
+export function useMyRoutes(today: string = localDay()) {
+  const from = addDays(today, -MY_ROUTES_PAST_DAYS);
+  const to = addDays(today, MY_ROUTES_NEXT_DAYS);
+  return useQuery({
+    queryKey: routeKeys.range(from, to),
+    queryFn: () => loadRoutesInRange(from, to),
+    retry: false,
   });
 }
 

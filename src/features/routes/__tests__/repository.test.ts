@@ -1,9 +1,9 @@
 import { AxiosError } from 'axios';
 import type { DriverRoute } from '@/features/routes/model';
 import { localDay } from '@/lib/format';
-import { fetchRoutes } from '@/services/api/driver';
+import { fetchRoute, fetchRoutes, fetchRoutesInRange } from '@/services/api/driver';
 import { store } from '@/services/store';
-import { loadRoute, loadRoutes } from '../repository';
+import { loadRoute, loadRoutes, loadRoutesInRange } from '../repository';
 
 /**
  * A lista de rotas abre sem rede, nunca mostra a cópia de outro dia como "de
@@ -14,7 +14,11 @@ jest.mock('@/services/store', () => {
   const { MemoryStore } = jest.requireActual('@/services/store/memory-store');
   return { store: new MemoryStore() };
 });
-jest.mock('@/services/api/driver', () => ({ fetchRoutes: jest.fn() }));
+jest.mock('@/services/api/driver', () => ({
+  fetchRoutes: jest.fn(),
+  fetchRoute: jest.fn(),
+  fetchRoutesInRange: jest.fn(),
+}));
 
 const rota = (id: number, status: DriverRoute['status'] = 'planned') =>
   ({
@@ -66,4 +70,34 @@ it('outros erros sobem para a tela', async () => {
     .mocked(fetchRoutes)
     .mockRejectedValue(new AxiosError('x', '500', undefined, null, { status: 500 } as never));
   await expect(loadRoutes()).rejects.toBeInstanceOf(AxiosError);
+});
+
+describe('rota de outro dia', () => {
+  it('fora do aparelho, busca no servidor e marca como só consulta', async () => {
+    jest.mocked(fetchRoute).mockResolvedValue(rota(40));
+    expect(await loadRoute(40)).toMatchObject({ route_id: 40, preview: true });
+    expect(fetchRoute).toHaveBeenCalledWith(40);
+  });
+
+  it('no aparelho, não vai ao servidor', async () => {
+    jest.mocked(fetchRoutes).mockResolvedValue([rota(3)]);
+    await loadRoutes();
+    expect(await loadRoute(3)).not.toHaveProperty('preview');
+    expect(fetchRoute).not.toHaveBeenCalled();
+  });
+
+  it('sem rede ou inexistente, devolve null; outro erro sobe', async () => {
+    jest.mocked(fetchRoute).mockRejectedValueOnce(semRede());
+    expect(await loadRoute(41)).toBeNull();
+    jest.mocked(fetchRoute).mockResolvedValueOnce(null);
+    expect(await loadRoute(42)).toBeNull();
+    jest.mocked(fetchRoute).mockRejectedValueOnce(new Error('500'));
+    await expect(loadRoute(43)).rejects.toThrow('500');
+  });
+
+  it('período vem direto do servidor', async () => {
+    jest.mocked(fetchRoutesInRange).mockResolvedValue([rota(5)]);
+    expect(await loadRoutesInRange('2026-11-01', '2026-11-30')).toEqual([rota(5)]);
+    expect(fetchRoutesInRange).toHaveBeenCalledWith('2026-11-01', '2026-11-30');
+  });
 });
