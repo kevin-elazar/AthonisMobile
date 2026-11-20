@@ -16,7 +16,7 @@ import { useTheme } from '@/theme/use-theme';
 
 const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
-/** "amanhã · 20/11/2026", "quinta · 21/11/2026". */
+/** "hoje · 19/11/2026", "amanhã · 20/11/2026", "sábado · 21/11/2026". */
 function dayLabel(day: string, today: string): string {
   const [year, month, date] = day.split('-').map(Number);
   const weekday = WEEKDAYS[new Date(Date.UTC(year, month - 1, date)).getUTCDay()];
@@ -24,7 +24,7 @@ function dayLabel(day: string, today: string): string {
   const diff = Math.round(
     (Date.UTC(year, month - 1, date) - Date.UTC(ty, tm - 1, td)) / 86_400_000,
   );
-  const relativo = diff === 1 ? 'amanhã' : diff === -1 ? 'ontem' : weekday;
+  const relativo = diff === 0 ? 'hoje' : diff === 1 ? 'amanhã' : diff === -1 ? 'ontem' : weekday;
   return `${relativo} · ${formatDay(day)}`;
 }
 

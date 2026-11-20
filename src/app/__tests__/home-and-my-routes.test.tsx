@@ -183,6 +183,7 @@ describe('Minhas rotas', () => {
     expect(screen.getByText('Anteriores')).toBeTruthy();
     expect(screen.getByText(/^amanhã · /)).toBeTruthy();
     expect(screen.getByText(/^ontem · /)).toBeTruthy();
+    expect(screen.getByText(/^hoje · /)).toBeTruthy();
     expect(screen.getByTestId('week-rate')).toHaveTextContent('Taxa de entrega: 50%');
 
     fireEvent.press(screen.getByTestId('my-route-3'));
