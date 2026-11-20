@@ -1,166 +1,106 @@
-# 📦 Athonis Mobile — Gerenciamento Operacional de Entregas
+# Athonis Entregas — aplicativo do motorista
 
-> Aplicativo mobile para entregadores desenvolvido como extensão do sistema web Athonis de otimização de rotas.  
-> **TCC — Engenharia de Software | Universidade Católica de Santa Catarina | 2026**
+[![CI](https://github.com/kevin-elazar/AthonisMobile/actions/workflows/ci.yml/badge.svg?branch=desenvMobile)](https://github.com/kevin-elazar/AthonisMobile/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=kevin-elazar_AthonisMobile&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kevin-elazar_AthonisMobile)
+[![Release](https://img.shields.io/github/v/release/kevin-elazar/AthonisMobile)](https://github.com/kevin-elazar/AthonisMobile/releases/latest)
 
----
+> Aplicativo mobile para entregadores, extensão do sistema web Athonis de otimização de rotas.
+> **TCC — Engenharia de Software · Centro Universitário Católica de Santa Catarina · 2026**
 
-## 📋 Sobre o projeto
+O sistema web já gerava rotas otimizadas, mas perdia o rastro depois que o caminhão saía. O aplicativo fecha esse ciclo: o motorista vê a sequência de paradas, registra cada entrega ou o motivo de não entregar — **mesmo sem sinal** — e o trajeto é registrado por GPS. O painel web compara a **rota planejada com a executada** para melhorar as próximas.
 
-O **Athonis Mobile** fecha o ciclo operacional que falta no planejamento de rotas: o que acontece depois que o motorista sai com o caminhão?
+**Empresa parceira:** Forte Acessórios para Móveis — Jaraguá do Sul, SC.
 
-O sistema web **Athonis** (desenvolvido no semestre anterior) já otimiza rotas via Google Maps e gerencia pedidos, clientes, motoristas e veículos. O que ele não faz é acompanhar a execução em campo. Não há registro de entregas concluídas, coleta de métricas operacionais ou retroalimentação dos dados de rota.
+| | |
+|---|---|
+| 📱 **Baixar o APK** | [Última release](https://github.com/kevin-elazar/AthonisMobile/releases/latest) |
+| 🖥️ **Painel web** | https://app.athonis.seletohub.cloud |
+| 📚 **Documentação** | [Wiki do projeto](https://github.com/kevin-elazar/AthonisMobile/wiki) — requisitos, casos de uso, C4, DER, ADRs, deploy, LGPD |
+| 🔒 **Privacidade** | https://app.athonis.seletohub.cloud/privacidade |
 
-Este TCC resolve essa lacuna com um aplicativo mobile que:
-- Mostra ao entregador a sequência de paradas do dia
-- Permite marcar entregas como concluídas ou com ocorrência
-- Coleta métricas em tempo real (tempo de deslocamento, desvios, trânsito)
-- Alimenta um painel analítico integrado ao sistema web
+## Funcionalidades
 
-Os dados coletados permitem ainda **análise comparativa entre a rota gerada pela API e a rota executada em campo**, identificando padrões de ineficiência e oportunidades de melhoria contínua.
+**Aplicativo (este repositório)**
+- Login do motorista com sessão longa (refresh token no armazenamento seguro do aparelho)
+- Rotas do dia e sequência de paradas, com a próxima destacada
+- Navegação até a parada pelo Google Maps (link universal, sem chave no app)
+- Chegada, entrega (com observação) e não entrega (com motivo obrigatório)
+- Cancelamento da rota com motivo; encerramento com resumo
+- **Offline first:** tudo funciona sem sinal e sincroniza depois, em ordem e sem duplicar
+- Rastro de GPS a cada 15 s ou 50 m, inclusive com a tela apagada, **só com a rota ativa**
+- Consentimento de localização antes do pedido do sistema e seção de privacidade (LGPD)
 
-### Empresa parceira
+**Painel web e API** (repositórios [athonis-front-end](https://github.com/kevin-elazar/athonis-front-end) e [AthonisBackend](https://github.com/kevin-elazar/AthonisBackend))
+- Acompanhamento ao vivo: posição do motorista e próxima parada
+- Execução em campo: conclusão, pontualidade, ocorrências por tipo, desempenho por motorista e região
+- Comparação planejado × executado de cada rota, com o trajeto real no mapa
 
-**Forte Acessórios para Móveis** — Jaraguá do Sul, SC  
-Comércio atacadista de madeira, ferragens, ferramentas e materiais correlatos.  
-Mais de 15 anos de mercado, operando diariamente um volume expressivo de pedidos e entregas para indústrias moveleiras e construtoras da região.
+## Arquitetura
 
----
-
-## 🎯 Funcionalidades
-
-### Sistema web (existente — Athonis)
-- ✅ Cadastro de pedidos, clientes, motoristas e veículos
-- ✅ Importação de pedidos via planilha CSV
-- ✅ Geração de rotas otimizadas via Google Maps API
-
-### Aplicativo mobile (TCC — em desenvolvimento)
-- [ ] Visualização da sequência de entregas do dia
-- [ ] Abertura de rota no Google Maps (deep link por parada)
-- [ ] Marcação de entrega como concluída ou com ocorrência
-- [ ] Registro de data, hora e observações por parada
-- [ ] Coleta de métricas em tempo real (geolocalização + cronômetro)
-- [ ] Sincronização automática com o backend Athonis
-
-### Painel analítico (TCC — em desenvolvimento)
-- [ ] Índice de conclusão de entregas por motorista
-- [ ] Tempo médio de entrega por região e horário
-- [ ] Análise comparativa: rota planejada vs. rota executada
-- [ ] Frequência e categorização de ocorrências
-
----
-
-## 🏗️ Arquitetura
-
-```
-┌──────────────────────────┐
-│      Athonis Mobile      │  ← React Native + Expo
-│  (entregador em campo)   │
-└────────────┬─────────────┘
-             │  REST API (JWT)
-             ▼
-┌──────────────────────────┐
-│     Athonis Backend      │  ← Node.js + Express
-│   (novos endpoints)      │
-└──────┬───────────────────┘
-       │
-  ┌────┴─────┐   ┌──────────────────────┐
-  │PostgreSQL│   │     Athonis Web      │  ← React
-  │   (BD)   │   │  (painel analítico)  │
-  └──────────┘   └──────────────────────┘
+```text
+ App (Expo · SQLite)            Navegador (painel)
+        │ HTTPS + JWT                  │
+        ▼                              ▼
+ ┌────────────── VPS Linux · Docker Compose ──────────────┐
+ │ Traefik (HTTPS) ─► API NestJS ─► PostgreSQL 17           │
+ │                 └► Painel Next.js                        │
+ │ Prometheus + Grafana · backup diário · staging/produção  │
+ └──────────────────────────┬──────────────────────────────┘
+                            ▼
+        Google Maps Platform (Route Optimization, Geocoding)
 ```
 
-**Padrão arquitetural:** MVC aplicado no mobile e no backend.  
-**Decisão de design:** o backend Athonis é *extendido* com novos endpoints — sem criação de nova infraestrutura.
+No app, o padrão é MVC: **models** em `src/features/*/model.ts` (schemas Zod), **controllers** em `src/features/*/hooks.ts` e `src/services/*` (API, fila offline, rastreamento) e **views** em `src/app/**` (telas do Expo Router) e `src/components/**`. Detalhes e diagramas: [Arquitetura](https://github.com/kevin-elazar/AthonisMobile/wiki/Arquitetura) e [Fila Offline](https://github.com/kevin-elazar/AthonisMobile/wiki/Fila-Offline).
 
-### Stack tecnológico
+## Stack
 
 | Camada | Tecnologia |
-|--------|------------|
-| Aplicativo mobile | React Native + Expo |
-| Backend (API) | Node.js + Express |
-| Frontend web | React |
-| Banco de dados | PostgreSQL |
-| Mapas / Rotas | Google Maps API |
-| Autenticação | JWT |
+|---|---|
+| Aplicativo | Expo SDK 57 (React Native 0.86), Expo Router, TypeScript strict |
+| Dados no aparelho | expo-sqlite (fila e cópia das rotas), expo-secure-store (sessão) |
+| Localização | expo-location + expo-task-manager (serviço em primeiro plano no Android) |
+| Estado e formulários | TanStack Query, React Hook Form + Zod |
+| API | NestJS 11 + TypeORM + PostgreSQL 17 |
+| Painel | Next.js 16 (React 19) |
+| Observabilidade | Sentry (`@sentry/react-native`): erros e travamentos no aparelho |
+| Qualidade e entrega | GitHub Actions, SonarCloud, EAS Build (APK na release) |
 
----
+## Como rodar
 
-## 🆚 Diferenciais frente ao mercado
+Pré-requisitos: Node 22, a [API](https://github.com/kevin-elazar/AthonisBackend) rodando e, para o celular, Android Studio ou um aparelho com o *development build*.
 
-Plataformas como **Track-POD**, **ControLog** e **Routech Motorista** cobrem o cotidiano operacional do entregador, mas apresentam duas limitações centrais:
-
-1. **Sem análise comparativa de rotas:** nenhuma compara a rota gerada automaticamente com a executada em campo para fins de melhoria contínua.
-2. **Sistemas fechados:** não permitem integração nativa com sistemas web preexistentes — exigem migração total da operação.
-
-O Athonis Mobile resolve ambos: análise comparativa como funcionalidade de primeira classe, e integração direta ao sistema já validado em produção.
-
-| Funcionalidade | Track-POD | ControLog | Routech | **Athonis Mobile** |
-|---|:---:|:---:|:---:|:---:|
-| Sequência de entregas + Google Maps | ✅ | ✅ | ✅ | ✅ |
-| Marcação de ocorrências com timestamp | ✅ | ✅ | ✅ | ✅ |
-| Coleta de métricas em tempo real | ✅ | ~  | ~  | ✅ |
-| Análise comparativa rota planejada vs. executada | ~ | ❌ | ❌ | ✅ |
-| Integração nativa com sistema web preexistente | ~ | ✅ | ~ | ✅ |
-| Painel analítico integrado | ✅ | ~ | ~ | ✅ |
-
----
-
-## 📅 Cronograma de desenvolvimento
-
-| Sprint | Período | Entrega |
-|--------|---------|---------|
-| S1 | Jul S1–S2 | Setup Expo, estrutura MVC, autenticação JWT |
-| S2 | Jul S3–S4 | Modelagem BD: tabelas de entrega, ocorrência e métrica |
-| S3 | Ago S1–S2 | Endpoints Node.js para listagem de entregas por motorista |
-| S4 | Ago S3–S4 | Tela de sequência de entregas + Google Maps (deep link) |
-| S5 | Set S1–S2 | Marcação de entrega concluída/ocorrência + timestamp |
-| S6 | Set S3–S4 | Coleta de métricas em tempo real (geolocalização + cronômetro) |
-| S7 | Out S1–S2 | Análise comparativa: rota planejada vs. executada |
-| S8 | Out S3–S4 | Painel analítico integrado ao frontend React |
-| S9 | Nov S1–S2 | Testes integrados, ajustes de UX e performance |
-| S10 | Nov S3–S4 | Documentação técnica, TCC final e defesa |
-
----
-
-## 🚀 Como executar
-
-> 🚧 Em desenvolvimento — instruções completas serão adicionadas durante os sprints.
-
-### Pré-requisitos
-- Node.js 20+
-- Expo CLI (`npm install -g expo-cli`)
-- Dispositivo físico ou emulador Android/iOS
-
-### Mobile (Expo)
 ```bash
-cd athonis-mobile
-npm install
-npx expo start
+npm ci
+cp .env.example .env    # EXPO_PUBLIC_API_URL=http://<ip-da-maquina>:8080
+npm run web             # telas no navegador (sem GPS; armazenamento em localStorage)
+npm run android         # emulador ou aparelho
 ```
 
-### Backend (Athonis)
-```bash
-cd athonis-backend
-npm install
-cp .env.example .env   # configure as variáveis (DB, JWT_SECRET, GOOGLE_MAPS_KEY)
-npm run dev
-```
+O rastreamento em segundo plano não funciona no Expo Go: use o *development build* (`npx eas-cli@latest build --profile development --platform android`). Ambiente Android no Windows: [`docs/ambiente-android.md`](docs/ambiente-android.md).
 
----
+| Comando | O quê |
+|---|---|
+| `npx jest` | Testes (fila offline, consentimento, formatação, erros da API, modelo da rota) |
+| `npx tsc --noEmit` | Typecheck |
+| `npx expo lint` | Lint |
 
-## 📄 Publicação acadêmica
+## Entrega contínua
 
-Artigo no formato **SBC Reviews 2025** disponível em [`docs/artigo-tcc.pdf`](docs/artigo-tcc.pdf).
+Todo push e PR passa por lint, typecheck, testes e SonarCloud. Em tag `v*`, o CI gera o APK de produção no EAS Build e publica numa GitHub Release — é o link do QR Code do pôster. Perfis em [`eas.json`](eas.json): `development`, `preview` (API de staging) e `production`.
 
----
+## Documentos do TCC
 
-## 👨‍💻 Autor
+| Documento | Onde |
+|---|---|
+| Wiki (fonte em Markdown) | [`docs/wiki/`](docs/wiki) |
+| Roteiro do piloto | [`docs/piloto.md`](docs/piloto.md) |
+| Modelo do termo de aceite | [`docs/termo-de-aceite.md`](docs/termo-de-aceite.md) |
+| Ajustes do artigo para a versão final | [`docs/ajustes-artigo-pac7.md`](docs/ajustes-artigo-pac7.md) |
+| Pôster do Demo Day | [`docs/poster/`](docs/poster) |
+| Plano de execução e decisões | [`SPEC.md`](SPEC.md) |
 
-**Kevin Chedid El Azar**  
-Engenharia de Software — Universidade Católica de Santa Catarina  
-✉️ kevin.azal@catolicasc.edu.br
+## Autor
 
----
+**Kevin Chedid El Azar** — Engenharia de Software, Católica SC · kevin.azal@catolicasc.edu.br
 
-*Projeto acadêmico — todos os direitos reservados ao autor.*
+Licença: [LICENSE](LICENSE).
