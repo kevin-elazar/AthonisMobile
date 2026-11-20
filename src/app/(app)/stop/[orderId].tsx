@@ -11,7 +11,12 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, LoadingState } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { useRoute, useRouteAction } from '@/features/routes/hooks';
-import { isFinalStop, OCCURRENCE_LABELS, type OccurrenceType } from '@/features/routes/model';
+import {
+  isFinalStop,
+  OCCURRENCE_LABELS,
+  previousAttemptLabel,
+  type OccurrenceType,
+} from '@/features/routes/model';
 import { confirm } from '@/lib/confirm';
 import { formatTime } from '@/lib/format';
 import { formatAddress, openNavigation, openPhone } from '@/lib/maps';
@@ -134,6 +139,19 @@ export default function StopScreen() {
           </Text>
           <StopStatusBadge stop={stop} />
         </View>
+
+        {previousAttemptLabel(stop) ? (
+          <View testID="stop-previous-attempt">
+            <Notice tone="warning">
+              {[
+                previousAttemptLabel(stop),
+                stop.previous_attempt?.notes ? `“${stop.previous_attempt.notes}”` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Notice>
+          </View>
+        ) : null}
 
         <Detail icon="location-outline" label="Endereço">
           {`${formatAddress(stop)} · CEP ${stop.address.zipcode}`}

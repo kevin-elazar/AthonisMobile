@@ -125,6 +125,30 @@ describe('tela inicial', () => {
     });
   });
 
+  it('próxima parada de nova tentativa avisa o que houve na anterior', () => {
+    mockRoutes.current = query({
+      routes: [
+        rota(5, {
+          status: 'active',
+          started_at: new Date().toISOString(),
+          stops: [
+            {
+              ...stop(51, 1),
+              attempt: 2,
+              previous_attempt: { route_id: 4, occurred_at: null, occurrence_type: 'refused', notes: null },
+            },
+          ],
+        }),
+      ],
+      fetchedAt: null,
+      offline: false,
+    });
+    render(<HomeScreen />);
+    expect(screen.getByTestId('next-stop-previous-attempt')).toHaveTextContent(
+      '2ª tentativa · anterior: Recusado pelo cliente',
+    );
+  });
+
   it('sem rota em andamento, não há cartão de próxima parada; o botão abre Minhas rotas', () => {
     mockRoutes.current = query({ routes: [rota(2)], fetchedAt: null, offline: false });
     render(<HomeScreen />);

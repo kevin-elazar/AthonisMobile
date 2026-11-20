@@ -157,6 +157,13 @@ describe('tela da rota', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith('/');
   });
 
+  it('parada de nova tentativa mostra o número da tentativa', async () => {
+    await store.saveRoute(rota({ stops: [{ ...stop(91, 1), attempt: 3 }, stop(92, 2)] as never }));
+    renderWithQuery(<RouteScreen />);
+    expect(await screen.findByTestId('stop-attempt-91')).toHaveTextContent('3ª tentativa');
+    expect(screen.queryByTestId('stop-attempt-92')).toBeNull();
+  });
+
   it('rota de outro dia (vinda do servidor) abre só para consulta', async () => {
     mockFetchRoute.mockResolvedValueOnce(rota({ planned_date: '2099-11-25' }));
     renderWithQuery(<RouteScreen />);

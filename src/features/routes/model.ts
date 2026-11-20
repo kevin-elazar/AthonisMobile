@@ -62,6 +62,19 @@ export const driverStopSchema = z.object({
   completed_at: z.string().nullable(),
   occurrence_type: z.string().nullable(),
   notes: z.string().nullable(),
+  // Opcionais: a cópia local gravada por versões antigas do app não tem.
+  /** Número da tentativa de entrega deste pedido (1 na primeira vez). */
+  attempt: z.number().optional(),
+  /** O que deu errado na tentativa anterior, para o motorista se preparar. */
+  previous_attempt: z
+    .object({
+      route_id: z.number(),
+      occurred_at: z.string().nullable(),
+      occurrence_type: z.string().nullable(),
+      notes: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 export type DriverStop = z.infer<typeof driverStopSchema>;
 
@@ -83,6 +96,27 @@ export const driverRouteSchema = z.object({
 export type DriverRoute = z.infer<typeof driverRouteSchema>;
 
 export const driverRoutesSchema = z.array(driverRouteSchema);
+
+/**
+ * "2ª tentativa · anterior: Cliente ausente em 18/11". Null na primeira
+ * tentativa.
+ */
+export function previousAttemptLabel(stop: DriverStop): string | null {
+  if (!stop.attempt || stop.attempt < 2) return null;
+  const anterior = stop.previous_attempt;
+  const motivo = anterior?.occurrence_type
+    ? (OCCURRENCE_LABELS[anterior.occurrence_type as OccurrenceType] ?? 'Outro motivo')
+    : null;
+  let quando: string | null = null;
+  if (anterior?.occurred_at) {
+    const data = new Date(anterior.occurred_at);
+    if (!Number.isNaN(data.getTime())) {
+      quando = `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}`;
+    }
+  }
+  const detalhe = [motivo, quando ? `em ${quando}` : null].filter(Boolean).join(' ');
+  return `${stop.attempt}ª tentativa${detalhe ? ` · anterior: ${detalhe}` : ''}`;
+}
 
 /** A parada não espera mais nenhuma ação do entregador. */
 export function isFinalStop(stop: Pick<DriverStop, 'status'>): boolean {

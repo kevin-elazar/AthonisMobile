@@ -89,6 +89,16 @@ function StopRow({
           <Text variant="bodySm" tone="muted" numberOfLines={2}>
             {formatAddress(stop)}
           </Text>
+          {stop.attempt && stop.attempt > 1 ? (
+            <Text
+              variant="caption"
+              tone="warning"
+              weight="medium"
+              testID={`stop-attempt-${stop.order_id}`}
+            >
+              {`${stop.attempt}ª tentativa`}
+            </Text>
+          ) : null}
         </View>
         <Ionicons name="chevron-forward" size={20} color={theme.muted} />
       </View>
@@ -188,38 +198,38 @@ export default function RouteScreen() {
   const preview = 'preview' in route && route.preview === true;
 
   const footer = preview ? undefined : route.status === 'planned' ? (
-      <Button
-        label="Iniciar rota"
-        icon="play"
-        onPress={() => void run('route_start')}
-        loading={action.isPending}
-        large
-        testID="route-start"
-      />
-    ) : route.status === 'active' && progress.open === 0 ? (
-      <Button
-        label="Encerrar rota"
-        icon="flag"
-        variant="success"
-        onPress={() => void finish()}
-        loading={action.isPending}
-        large
-        testID="route-finish"
-      />
-    ) : proxima ? (
-      <Button
-        label={`Abrir parada ${proxima.stop_sequence ?? ''}`.trim()}
-        icon="arrow-forward"
-        onPress={() =>
-          router.push({
-            pathname: '/stop/[orderId]',
-            params: { orderId: proxima.order_id, routeId: route.route_id },
-          })
-        }
-        large
-        testID="route-next-stop"
-      />
-    ) : undefined;
+    <Button
+      label="Iniciar rota"
+      icon="play"
+      onPress={() => void run('route_start')}
+      loading={action.isPending}
+      large
+      testID="route-start"
+    />
+  ) : route.status === 'active' && progress.open === 0 ? (
+    <Button
+      label="Encerrar rota"
+      icon="flag"
+      variant="success"
+      onPress={() => void finish()}
+      loading={action.isPending}
+      large
+      testID="route-finish"
+    />
+  ) : proxima ? (
+    <Button
+      label={`Abrir parada ${proxima.stop_sequence ?? ''}`.trim()}
+      icon="arrow-forward"
+      onPress={() =>
+        router.push({
+          pathname: '/stop/[orderId]',
+          params: { orderId: proxima.order_id, routeId: route.route_id },
+        })
+      }
+      large
+      testID="route-next-stop"
+    />
+  ) : undefined;
 
   return (
     <Screen footer={footer}>

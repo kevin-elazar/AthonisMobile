@@ -187,6 +187,29 @@ describe('parada', () => {
     });
   });
 
+  it('nova tentativa avisa o que houve na anterior, com a observação', async () => {
+    await store.saveRoute(
+      rota({
+        stops: [
+          {
+            ...stop(91, 1),
+            attempt: 2,
+            previous_attempt: {
+              route_id: 4,
+              occurred_at: null,
+              occurrence_type: 'address_not_found',
+              notes: 'Número não existe',
+            },
+          },
+        ] as never,
+      }),
+    );
+    renderWithQuery(<StopScreen />);
+    const aviso = await screen.findByTestId('stop-previous-attempt');
+    expect(aviso).toHaveTextContent(/2ª tentativa · anterior: Endereço não encontrado/);
+    expect(aviso).toHaveTextContent(/Número não existe/);
+  });
+
   it('parada encerrada mostra o resultado, sem ações', async () => {
     await store.saveRoute(rota({ stops: [stop(91, 1, 'failed'), stop(92, 2)] as never }));
     renderWithQuery(<StopScreen />);

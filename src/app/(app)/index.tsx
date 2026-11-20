@@ -9,7 +9,12 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { useRoutes } from '@/features/routes/hooks';
-import { nextStop, routeProgress, type DriverRoute } from '@/features/routes/model';
+import {
+  nextStop,
+  previousAttemptLabel,
+  routeProgress,
+  type DriverRoute,
+} from '@/features/routes/model';
 import { daySummary } from '@/features/routes/summary';
 import { formatDateTime, formatDistance, formatDuration, formatTime, plural } from '@/lib/format';
 import { formatAddress, openNavigation, openPhone } from '@/lib/maps';
@@ -177,6 +182,11 @@ function NextStopCard({ route }: { route: DriverRoute }) {
         {stop.address.complement ? ` · ${stop.address.complement}` : ''}
       </Text>
       <Text variant="bodySm">{detalhes.join(' · ')}</Text>
+      {previousAttemptLabel(stop) ? (
+        <Text variant="bodySm" tone="warning" weight="medium" testID="next-stop-previous-attempt">
+          {previousAttemptLabel(stop)}
+        </Text>
+      ) : null}
       <View style={styles.quickActions}>
         <View style={styles.flex}>
           <Button
