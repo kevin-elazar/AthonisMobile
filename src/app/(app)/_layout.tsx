@@ -44,14 +44,13 @@ export default function AppLayout() {
         headerRight: () => <SyncBadge />,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Rotas de hoje' }} />
-      <Stack.Screen name="my-routes" options={{ title: 'Minhas rotas' }} />
+      {/* Hoje, Minhas rotas e Conta: as abas, com cabeçalho próprio. */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="route/[id]" options={{ title: 'Rota' }} />
       <Stack.Screen name="stop/[orderId]" options={{ title: 'Parada' }} />
       <Stack.Screen name="occurrence" options={{ title: 'Não entregue' }} />
       <Stack.Screen name="cancel-route" options={{ title: 'Cancelar rota' }} />
       <Stack.Screen name="sync" options={{ title: 'Sincronização', headerRight: undefined }} />
-      <Stack.Screen name="profile" options={{ title: 'Minha conta' }} />
       <Stack.Screen
         name="location-consent"
         options={{ title: 'Localização', presentation: 'modal', headerRight: undefined }}

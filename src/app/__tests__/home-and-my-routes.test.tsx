@@ -3,8 +3,8 @@ import type { DriverRoute } from '@/features/routes/model';
 import { addDays } from '@/features/routes/summary';
 import { localDay } from '@/lib/format';
 import { openNavigation, openPhone } from '@/lib/maps';
-import HomeScreen from '../(app)/index';
-import MyRoutesScreen from '../(app)/my-routes';
+import HomeScreen from '../(app)/(tabs)/index';
+import MyRoutesScreen from '../(app)/(tabs)/my-routes';
 
 /**
  * Tela inicial (resumo do dia e próxima parada) e a lista "Minhas rotas"
@@ -107,9 +107,9 @@ describe('tela inicial', () => {
     });
     render(<HomeScreen />);
 
-    expect(screen.getByTestId('today-summary')).toBeTruthy();
-    expect(screen.getByText('parada a fazer')).toBeTruthy();
-    expect(screen.getByText(/término previsto às/)).toBeTruthy();
+    expect(screen.getByTestId('today-summary')).toHaveTextContent(/1 de 2 paradas/);
+    expect(screen.getByText('término')).toBeTruthy();
+    expect(screen.getByText(/, Carla$/)).toBeTruthy();
 
     expect(screen.getByText('PRÓXIMA PARADA · 2 DE 2')).toBeTruthy();
     expect(screen.getByText(/Janela 08:00 - 12:00 · NF NF-77 · 3 volumes/)).toBeTruthy();
@@ -149,13 +149,44 @@ describe('tela inicial', () => {
     );
   });
 
-  it('sem rota em andamento, não há cartão de próxima parada; o botão abre Minhas rotas', () => {
+  it('rota ainda não iniciada: cartão "Pronto para sair", sem repetir a rota na lista', () => {
     mockRoutes.current = query({ routes: [rota(2)], fetchedAt: null, offline: false });
+    mockMyRoutes.current = query([]);
     render(<HomeScreen />);
 
     expect(screen.queryByTestId('next-stop-card')).toBeNull();
-    fireEvent.press(screen.getByTestId('open-my-routes'));
+    expect(screen.getByTestId('ready-card')).toHaveTextContent(/Rota #2 · 2 paradas/);
+    expect(screen.queryByTestId('route-card-2')).toBeNull();
+    fireEvent.press(screen.getByTestId('ready-open'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/route/[id]', params: { id: 2 } });
+    fireEvent.press(screen.getByTestId('home-avatar'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/profile');
+  });
+
+  it('mostra as próximas rotas e leva para a aba Rotas', () => {
+    mockRoutes.current = query({ routes: [], fetchedAt: '2026-11-23T12:00:00Z', offline: false });
+    mockMyRoutes.current = query([
+      rota(7, { planned_date: addDays(hoje, 2) }),
+      rota(6, { planned_date: addDays(hoje, 1) }),
+      rota(1, { planned_date: addDays(hoje, -1) }),
+    ]);
+    render(<HomeScreen />);
+
+    expect(screen.getByTestId('upcoming-6')).toBeTruthy();
+    expect(screen.getByTestId('upcoming-7')).toBeTruthy();
+    expect(screen.queryByTestId('upcoming-1')).toBeNull();
+    fireEvent.press(screen.getByTestId('upcoming-see-all'));
     expect(mockRouter.push).toHaveBeenCalledWith('/my-routes');
+    fireEvent.press(screen.getByTestId('upcoming-6'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/route/[id]', params: { id: 6 } });
+  });
+
+  it('sem conexão, avisa e esconde as próximas rotas', () => {
+    mockRoutes.current = query({ routes: [rota(2)], fetchedAt: null, offline: true });
+    mockMyRoutes.current = query([rota(6, { planned_date: addDays(hoje, 1) })]);
+    render(<HomeScreen />);
+    expect(screen.getByText(/Sem conexão/)).toBeTruthy();
+    expect(screen.queryByTestId('upcoming-routes')).toBeNull();
   });
 
   it('sem rotas hoje, sem resumo', () => {

@@ -10,7 +10,7 @@ import { clearSession } from '@/services/session';
 import { stopSync } from '@/services/sync';
 import CancelRouteScreen from '../(app)/cancel-route';
 import OccurrenceScreen from '../(app)/occurrence';
-import ProfileScreen from '../(app)/profile';
+import ProfileScreen from '../(app)/(tabs)/profile';
 import StopScreen from '../(app)/stop/[orderId]';
 import LoginScreen from '../(auth)/login';
 
